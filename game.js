@@ -1,0 +1,781 @@
+// 扉扉大冒險 — Phaser 3, 單檔案無建置流程
+// 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
+
+const COLORS = [
+  { name: '紅色', hex: 0xff5c7a, emoji: '🔴' },
+  { name: '黃色', hex: 0xffd23f, emoji: '🟡' },
+  { name: '綠色', hex: 0x4caf78, emoji: '🟢' },
+  { name: '紫色', hex: 0xb185db, emoji: '🟣' },
+];
+
+// 每句說明的注音標註：[漢字, 注音]，標點符號注音留空
+const STAR_INSTR = [['接', 'ㄐㄧㄝ'], ['住', 'ㄓㄨˋ'], ['這', 'ㄓㄜˋ'], ['個', 'ㄍㄜˋ'], ['顏', 'ㄧㄢˊ'], ['色', 'ㄙㄜˋ'], ['的', '˙ㄉㄜ'], ['星', 'ㄒㄧㄥ'], ['星', 'ㄒㄧㄥ'], ['！', '']];
+const SCHULTE_INSTR = [['依', 'ㄧ'], ['照', 'ㄓㄠˋ'], ['數', 'ㄕㄨˋ'], ['字', 'ㄗˋ'], ['順', 'ㄕㄨㄣˋ'], ['序', 'ㄒㄩˋ'], ['點', 'ㄉㄧㄢˇ'], ['下', 'ㄒㄧㄚˋ'], ['去', 'ㄑㄩˋ'], ['！', '']];
+const MEMORY_INSTR = [['找', 'ㄓㄠˇ'], ['出', 'ㄔㄨ'], ['一', 'ㄧ'], ['樣', 'ㄧㄤˋ'], ['的', '˙ㄉㄜ'], ['圖', 'ㄊㄨˊ'], ['案', 'ㄢˋ'], ['配', 'ㄆㄟˋ'], ['對', 'ㄉㄨㄟˋ'], ['！', '']];
+const SIMON_INSTR = [['記', 'ㄐㄧˋ'], ['住', 'ㄓㄨˋ'], ['顏', 'ㄧㄢˊ'], ['色', 'ㄙㄜˋ'], ['出', 'ㄔㄨ'], ['現', 'ㄒㄧㄢˋ'], ['的', '˙ㄉㄜ'], ['順', 'ㄕㄨㄣˋ'], ['序', 'ㄒㄩˋ'], ['，', ''], ['跟', 'ㄍㄣ'], ['著', '˙ㄓㄜ'], ['點', 'ㄉㄧㄢˇ'], ['一', 'ㄧ'], ['次', 'ㄘˋ'], ['！', '']];
+const ODD_INSTR = [['快', 'ㄎㄨㄞˋ'], ['找', 'ㄓㄠˇ'], ['出', 'ㄔㄨ'], ['不', 'ㄅㄨˋ'], ['一', 'ㄧ'], ['樣', 'ㄧㄤˋ'], ['的', '˙ㄉㄜ'], ['那', 'ㄋㄚˋ'], ['一', 'ㄧ'], ['個', 'ㄍㄜˋ'], ['！', '']];
+const MAZE_INSTR = [['手', 'ㄕㄡˇ'], ['指', 'ㄓˇ'], ['沿', 'ㄧㄢˊ'], ['著', '˙ㄓㄜ'], ['路', 'ㄌㄨˋ'], ['線', 'ㄒㄧㄢˋ'], ['滑', 'ㄏㄨㄚˊ'], ['到', 'ㄉㄠˋ'], ['終', 'ㄓㄨㄥ'], ['點', 'ㄉㄧㄢˇ'], ['！', '']];
+const BUBBLE_INSTR = [['點', 'ㄉㄧㄢˇ'], ['破', 'ㄆㄛˋ'], ['這', 'ㄓㄜˋ'], ['個', 'ㄍㄜˋ'], ['顏', 'ㄧㄢˊ'], ['色', 'ㄙㄜˋ'], ['的', '˙ㄉㄜ'], ['泡', 'ㄆㄠˋ'], ['泡', 'ㄆㄠˋ'], ['！', '']];
+const RHYTHM_INSTR = [['看', 'ㄎㄢˋ'], ['圓', 'ㄩㄢˊ'], ['圈', 'ㄑㄩㄢ'], ['長', 'ㄓㄤˇ'], ['到', 'ㄉㄠˋ'], ['剛', 'ㄍㄤ'], ['好', 'ㄏㄠˇ'], ['的', '˙ㄉㄜ'], ['時', 'ㄕˊ'], ['候', 'ㄏㄡˋ'], ['點', 'ㄉㄧㄢˇ'], ['一', 'ㄧ'], ['下', 'ㄒㄧㄚˋ'], ['！', '']];
+
+class BootScene extends Phaser.Scene {
+  constructor() { super('Boot'); }
+  preload() {
+    this.failedKeys = new Set();
+    this.load.image('girl', 'assets/girl.png');
+    this.load.image('cat', 'assets/cat.png');
+    this.load.on('loaderror', (file) => this.failedKeys.add(file.key));
+  }
+  create() {
+    this.game.loadedChars = { girl: !this.failedKeys.has('girl'), cat: !this.failedKeys.has('cat') };
+    this.scene.start('CharSelect');
+  }
+}
+
+function beep(freq, duration = 0.12, type = 'sine') {
+  try {
+    const ctx = window._sfxCtx || (window._sfxCtx = new (window.AudioContext || window.webkitAudioContext)());
+    if (ctx.state === 'suspended') ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) { /* audio unavailable, ignore */ }
+}
+const sfxCorrect = () => beep(880, 0.12, 'sine');
+const sfxWrong = () => beep(220, 0.15, 'sawtooth');
+const sfxComplete = () => [880, 1100, 1320].forEach((f, i) => setTimeout(() => beep(f, 0.15), i * 120));
+
+function pressEffect(scene, target, onClick) {
+  target.on('pointerdown', () => {
+    beep(600, 0.06, 'triangle');
+    scene.tweens.add({
+      targets: target, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true,
+      onComplete: () => onClick && onClick(),
+    });
+  });
+}
+
+function popupText(scene, x, y, str, color) {
+  const t = scene.add.text(x, y, str, { fontSize: '26px', color, fontStyle: 'bold' }).setOrigin(0.5);
+  scene.tweens.add({ targets: t, y: y - 50, alpha: 0, duration: 650, onComplete: () => t.destroy() });
+}
+
+function addBackButton(scene) {
+  const btn = scene.add.text(26, 22, '🔙', { fontSize: '26px' }).setOrigin(0.5).setInteractive();
+  pressEffect(scene, btn, () => scene.scene.start('Menu'));
+}
+
+function annotatedInstruction(scene, y, pairs) {
+  const { width } = scene.scale;
+  const gap = Math.min(34, (width * 0.94) / pairs.length);
+  const totalWidth = gap * pairs.length;
+  const startX = width / 2 - totalWidth / 2 + gap / 2;
+  pairs.forEach(([ch, zy], i) => {
+    const cx = startX + i * gap;
+    if (zy) {
+      const zyText = scene.add.text(cx, y - 24, zy, { fontSize: '16px', color: '#ff5c7a', fontStyle: 'bold' }).setOrigin(0.5);
+      if (zyText.width > gap - 1) zyText.setScale((gap - 1) / zyText.width);
+    }
+    scene.add.text(cx, y, ch, { fontSize: '26px', color: '#666', fontFamily: 'sans-serif' }).setOrigin(0.5);
+  });
+}
+
+function addHeader(scene, instrPairs) {
+  addBackButton(scene);
+  annotatedInstruction(scene, 74, instrPairs);
+}
+
+function makeHearts(scene, x, y, count = 5) {
+  return Array.from({ length: count }, (_, i) => scene.add.text(x + i * 28, y, '❤️', { fontSize: '22px' }));
+}
+
+function bobTween(scene, target) {
+  scene.tweens.add({ targets: target, y: target.y - 8, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+}
+
+const CHAR_EMOJI = { girl: '👧', cat: '🐱' };
+
+function addCharacter(scene, x, y, size) {
+  const key = scene.registry.get('char') || 'girl';
+  if (scene.game.loadedChars && scene.game.loadedChars[key]) {
+    return scene.add.image(x, y, key).setDisplaySize(size, size);
+  }
+  return scene.add.text(x, y, CHAR_EMOJI[key], { fontSize: `${size}px` }).setOrigin(0.5);
+}
+
+class CharSelectScene extends Phaser.Scene {
+  constructor() { super('CharSelect'); }
+  create() {
+    const { width, height } = this.scale;
+    this.add.text(width / 2, height * 0.15, '扉扉大冒險', { fontSize: '32px', fontFamily: 'sans-serif', color: '#ff3d7f', fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 6 }).setOrigin(0.5);
+    this.add.text(width / 2, height * 0.24, '選一個角色出發！', { fontSize: '20px', color: '#777' }).setOrigin(0.5);
+
+    this.makeCharCard(width / 2 - 90, height * 0.45, 'girl', '扉扉');
+    this.makeCharCard(width / 2 + 90, height * 0.45, 'cat', '小貓咪');
+  }
+  makeCharCard(x, y, key, label) {
+    const card = this.add.rectangle(x, y, 140, 170, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    const ok = this.game.loadedChars && this.game.loadedChars[key];
+    if (ok) this.add.image(x, y - 25, key).setDisplaySize(90, 90);
+    else this.add.text(x, y - 25, CHAR_EMOJI[key], { fontSize: '64px' }).setOrigin(0.5);
+    this.add.text(x, y + 55, label, { fontSize: '18px' }).setOrigin(0.5);
+    pressEffect(this, card, () => {
+      this.registry.set('char', key);
+      this.scene.start('Menu');
+    });
+  }
+}
+
+class MenuScene extends Phaser.Scene {
+  constructor() { super('Menu'); }
+  create() {
+    const { width, height } = this.scale;
+    this.add.text(width / 2, height * 0.1, '← 換角色', { fontSize: '16px', color: '#999' })
+      .setOrigin(0.5).setInteractive().on('pointerdown', () => this.scene.start('CharSelect'));
+    addCharacter(this, width / 2 - 90, height * 0.16, 40);
+    this.add.text(width / 2 + 10, height * 0.16, '扉扉大冒險', { fontSize: '26px', fontFamily: 'sans-serif', color: '#ff3d7f', fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 }).setOrigin(0.5);
+    this.add.text(width / 2, height * 0.23, '選一個遊戲開始吧！', { fontSize: '18px', color: '#777' }).setOrigin(0.5);
+
+    const levels = [
+      ['⭐', '接星星', () => this.scene.start('StarCatcher', { level: 1 })],
+      ['🔢', '數字方格', () => this.scene.start('Schulte', { size: 4 })],
+      ['🃏', '記憶翻牌', () => this.scene.start('Memory', { pairs: 6 })],
+      ['🎵', '顏色複誦', () => this.scene.start('Simon')],
+      ['🔍', '找不同', () => this.scene.start('OddOneOut', { level: 1 })],
+      ['🧵', '走迷宮', () => this.scene.start('Maze')],
+      ['🫧', '數泡泡', () => this.scene.start('Bubble', { level: 1 })],
+      ['🥁', '節奏拍拍', () => this.scene.start('Rhythm')],
+    ];
+    const cols = 4;
+    const pad = width * 0.04;
+    const size = (width - pad * (cols + 1)) / cols;
+    const startX = pad + size / 2;
+    const startY = height * 0.4;
+    levels.forEach(([icon, label, onClick], i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = startX + col * (size + pad);
+      const y = startY + row * (size + pad + 20);
+      this.makeSquare(x, y, size, icon, label, onClick);
+    });
+  }
+  makeSquare(x, y, size, icon, label, onClick) {
+    const btn = this.add.rectangle(x, y, size, size, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(x, y - size * 0.1, icon, { fontSize: `${Math.floor(size * 0.42)}px` }).setOrigin(0.5);
+    this.add.text(x, y + size * 0.34, label, { fontSize: '12px', color: '#777' }).setOrigin(0.5);
+    pressEffect(this, btn, onClick);
+  }
+}
+
+class StarCatcherScene extends Phaser.Scene {
+  constructor() { super('StarCatcher'); }
+  init(data) { this.level = data.level || 1; }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.colorCount = Math.min(3 + this.level, COLORS.length);
+    this.target = Phaser.Utils.Array.GetRandom(COLORS.slice(0, this.colorCount));
+    this.spawnDelay = Math.max(900 - this.level * 150, 350);
+
+    addHeader(this, STAR_INSTR);
+    this.add.circle(26, 100, 13, this.target.hex).setStrokeStyle(2, 0x555555);
+    this.hearts = makeHearts(this, 56, 108, 5);
+
+    this.girl = addCharacter(this, width / 2, height * 0.68, 80);
+    this.basket = this.add.text(width / 2, height * 0.75, '🧺', { fontSize: '40px' }).setOrigin(0.5);
+
+    this.input.on('pointermove', (p) => {
+      const x = Phaser.Math.Clamp(p.x, 40, width - 40);
+      this.girl.x = x; this.basket.x = x;
+    });
+
+    this.falling = [];
+    this.spawnTimer = this.time.addEvent({ delay: this.spawnDelay, loop: true, callback: () => this.spawnStar() });
+  }
+  loseLife() {
+    this.lives--;
+    this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) this.endGame();
+  }
+  spawnStar() {
+    const { width } = this.scale;
+    const c = Phaser.Utils.Array.GetRandom(COLORS.slice(0, this.colorCount));
+    const star = this.add.star(Phaser.Math.Between(40, width - 40), -20, 5, 12, 24, c.hex).setStrokeStyle(2, 0x555555);
+    star.colorData = c;
+    this.falling.push(star);
+  }
+  update() {
+    if (this.finished) return;
+    const { height } = this.scale;
+    for (let i = this.falling.length - 1; i >= 0; i--) {
+      const star = this.falling[i];
+      star.y += 3.5 + this.level * 1.2;
+      if (Phaser.Math.Distance.Between(star.x, star.y, this.basket.x, this.basket.y) < 55) {
+        if (star.colorData === this.target) {
+          popupText(this, star.x, star.y, '✓', '#4caf78');
+          sfxCorrect();
+        } else {
+          sfxWrong();
+          popupText(this, star.x, star.y, '✕', '#ff5c7a');
+          this.tweens.add({ targets: this.basket, x: this.basket.x + 8, duration: 60, yoyo: true, repeat: 2 });
+          this.loseLife();
+        }
+        star.destroy();
+        this.falling.splice(i, 1);
+      } else if (star.y > height + 30) {
+        star.destroy();
+        this.falling.splice(i, 1);
+      }
+    }
+  }
+  endGame() {
+    this.finished = true;
+    this.spawnTimer.remove();
+    this.falling.forEach(s => s.destroy());
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, '💔 愛心用光了！', { fontSize: '26px' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
+class SchulteScene extends Phaser.Scene {
+  constructor() { super('Schulte'); }
+  init(data) { this.size = data.size || 3; }
+  create() {
+    const { width, height } = this.scale;
+    this.next = 1;
+    this.lives = 5;
+    this.startTime = this.time.now;
+    const total = this.size * this.size;
+
+    addHeader(this, SCHULTE_INSTR);
+    this.hearts = makeHearts(this, 56, 108, 5);
+    this.progressText = this.add.text(width - 20, 108, `0 / ${total}`, { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+    this.girl = addCharacter(this, width / 2, 140, 50);
+    this.timeText = this.add.text(width / 2, height - 30, '⏱ 0.0s', { fontSize: '22px', color: '#444', fontStyle: 'bold' }).setOrigin(0.5);
+
+    const nums = Phaser.Utils.Array.Shuffle(Phaser.Utils.Array.NumberArray(1, total));
+    const gridSize = Math.min(width, height) * 0.78;
+    const cell = gridSize / this.size;
+    const originX = width / 2 - gridSize / 2;
+    const originY = 172;
+
+    nums.forEach((num, idx) => {
+      const row = Math.floor(idx / this.size);
+      const col = idx % this.size;
+      const x = originX + col * cell + cell / 2;
+      const y = originY + row * cell + cell / 2;
+      const tile = this.add.rectangle(x, y, cell - 8, cell - 8, 0xffffff).setStrokeStyle(3, 0xb185db).setInteractive();
+      const label = this.add.text(x, y, String(num), { fontSize: '24px', color: '#555' }).setOrigin(0.5);
+      tile.num = num; tile.label = label;
+      tile.on('pointerdown', () => this.tap(tile));
+    });
+
+    this.total = total;
+  }
+  loseLife() {
+    this.lives--;
+    this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) this.endGame(false);
+  }
+  tap(tile) {
+    if (this.finished) return;
+    if (tile.num !== this.next) {
+      sfxWrong();
+      this.tweens.add({ targets: tile, x: tile.x + 6, duration: 60, yoyo: true, repeat: 2 });
+      this.loseLife();
+      return;
+    }
+    sfxCorrect();
+    tile.disableInteractive();
+    this.tweens.add({ targets: [tile, tile.label], alpha: 0.15, duration: 200 });
+    this.next++;
+    this.progressText.setText(`${this.next - 1} / ${this.total}`);
+    if (this.next > this.total) this.endGame(true);
+  }
+  update() {
+    if (this.finished) return;
+    const elapsed = (this.time.now - this.startTime) / 1000;
+    this.timeText.setText(`⏱ ${elapsed.toFixed(1)}s`);
+  }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    if (success) {
+      this.add.text(width / 2, height / 2 - 60, '🎉 太棒了！', { fontSize: '28px' }).setOrigin(0.5);
+      const nextSize = Math.min(this.size + 1, 5);
+      const again = this.add.rectangle(width / 2, height / 2, 220, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+      this.add.text(width / 2, height / 2, `挑戰 ${nextSize}x${nextSize}`, { fontSize: '20px' }).setOrigin(0.5);
+      pressEffect(this, again, () => this.scene.start('Schulte', { size: nextSize }));
+      const menu = this.add.rectangle(width / 2, height / 2 + 80, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+      this.add.text(width / 2, height / 2 + 80, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+      pressEffect(this, menu, () => this.scene.start('Menu'));
+    } else {
+      this.add.text(width / 2, height / 2 - 40, '💔 愛心用光了！', { fontSize: '26px' }).setOrigin(0.5);
+      const menu = this.add.rectangle(width / 2, height / 2 + 40, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+      this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+      pressEffect(this, menu, () => this.scene.start('Menu'));
+    }
+  }
+}
+
+const FRUIT_EMOJI = ['🍎', '🍌', '🍇', '🍓', '🍒', '🥝', '🍍', '🍑'];
+
+class MemoryScene extends Phaser.Scene {
+  constructor() { super('Memory'); }
+  init(data) { this.pairs = data.pairs || 6; }
+  create() {
+    const { width, height } = this.scale;
+    addHeader(this, MEMORY_INSTR);
+    this.movesText = this.add.text(56, 108, '次數: 0', { fontSize: '18px', color: '#444', fontStyle: 'bold' });
+    const pet = addCharacter(this, width - 50, 112, 46);
+    bobTween(this, pet);
+    this.matchedCount = 0; this.moves = 0; this.locked = false; this.first = null;
+
+    const icons = Phaser.Utils.Array.Shuffle(FRUIT_EMOJI.slice(0, this.pairs));
+    const deck = Phaser.Utils.Array.Shuffle([...icons, ...icons]);
+
+    const cols = 4;
+    const rows = Math.ceil(deck.length / cols);
+    const cell = Math.min(width * 0.86 / cols, height * 0.58 / rows);
+    const originX = width / 2 - (cell * cols) / 2;
+    const originY = height * 0.39;
+
+    this.cards = deck.map((icon, idx) => {
+      const row = Math.floor(idx / cols), col = idx % cols;
+      const x = originX + col * cell + cell / 2;
+      const y = originY + row * cell + cell / 2;
+      const back = this.add.rectangle(x, y, cell - 10, cell - 10, 0xb185db).setStrokeStyle(3, 0xffffff).setInteractive();
+      const label = this.add.text(x, y, icon, { fontSize: `${Math.floor(cell * 0.5)}px` }).setOrigin(0.5).setVisible(false);
+      const card = { back, label, icon, matched: false };
+      back.on('pointerdown', () => this.flip(card));
+      return card;
+    });
+  }
+  flip(card) {
+    if (this.locked || card.matched || card === this.first) return;
+    card.back.setFillStyle(0xffffff);
+    card.label.setVisible(true);
+    if (!this.first) { this.first = card; return; }
+
+    const second = card;
+    this.moves++;
+    this.movesText.setText(`次數: ${this.moves}`);
+    if (this.first.icon === second.icon) {
+      this.first.matched = second.matched = true;
+      sfxCorrect();
+      this.matchedCount++;
+      this.first = null;
+      if (this.matchedCount === this.pairs) this.endGame();
+    } else {
+      this.locked = true;
+      sfxWrong();
+      this.time.delayedCall(500, () => {
+        [this.first, second].forEach(c => { c.back.setFillStyle(0xb185db); c.label.setVisible(false); });
+        this.first = null; this.locked = false;
+      });
+    }
+  }
+  endGame() {
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, `🎉 配對成功！共 ${this.moves} 次`, { fontSize: '24px' }).setOrigin(0.5);
+    const menu = this.add.rectangle(width / 2, height / 2 + 40, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+class SimonScene extends Phaser.Scene {
+  constructor() { super('Simon'); }
+  create() {
+    const { width, height } = this.scale;
+    addHeader(this, SIMON_INSTR);
+    this.roundText = this.add.text(56, 108, '關卡: 1', { fontSize: '18px', color: '#444', fontStyle: 'bold' });
+    const pet = addCharacter(this, width - 50, 112, 46);
+    bobTween(this, pet);
+
+    this.sequence = [];
+    this.playerStep = 0;
+    this.accepting = false;
+
+    const positions = [
+      { x: width / 2 - 70, y: height * 0.45 }, { x: width / 2 + 70, y: height * 0.45 },
+      { x: width / 2 - 70, y: height * 0.6 }, { x: width / 2 + 70, y: height * 0.6 },
+    ];
+    this.buttons = COLORS.map((c, i) => {
+      const btn = this.add.rectangle(positions[i].x, positions[i].y, 110, 110, c.hex).setStrokeStyle(4, 0xffffff).setInteractive();
+      btn.baseColor = c.hex;
+      btn.on('pointerdown', () => this.onPress(i));
+      return btn;
+    });
+
+    this.nextRound();
+  }
+  nextRound() {
+    this.accepting = false;
+    this.playerStep = 0;
+    this.sequence.push(Phaser.Math.Between(0, this.buttons.length - 1));
+    this.roundText.setText(`關卡: ${this.sequence.length}`);
+    this.time.delayedCall(500, () => this.playSequence());
+  }
+  playSequence() {
+    this.sequence.forEach((idx, i) => this.time.delayedCall(i * 650, () => this.flash(idx)));
+    this.time.delayedCall(this.sequence.length * 650 + 200, () => { this.accepting = true; });
+  }
+  flash(idx) {
+    const btn = this.buttons[idx];
+    beep(330 + idx * 110, 0.25);
+    btn.setFillStyle(0xffffff);
+    this.time.delayedCall(300, () => btn.setFillStyle(btn.baseColor));
+  }
+  onPress(idx) {
+    if (!this.accepting) return;
+    this.flash(idx);
+    if (idx === this.sequence[this.playerStep]) {
+      this.playerStep++;
+      if (this.playerStep === this.sequence.length) {
+        this.accepting = false;
+        this.time.delayedCall(500, () => this.nextRound());
+      }
+    } else {
+      this.accepting = false;
+      sfxWrong();
+      this.endGame();
+    }
+  }
+  endGame() {
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 50, `🎉 過了 ${this.sequence.length - 1} 關！`, { fontSize: '24px' }).setOrigin(0.5);
+    const again = this.add.rectangle(width / 2, height / 2 + 30, 220, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 30, '再玩一次', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('Simon'));
+    const menu = this.add.rectangle(width / 2, height / 2 + 100, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 100, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+class OddOneOutScene extends Phaser.Scene {
+  constructor() { super('OddOneOut'); }
+  init(data) { this.level = data.level || 1; }
+  create() {
+    const { width, height } = this.scale;
+    this.score = 0;
+    this.timeLeft = 45;
+    this.gridSize = Math.min(4 + Math.floor(this.level / 2), 6);
+
+    addHeader(this, ODD_INSTR);
+    this.scoreText = this.add.text(56, 108, '⭐ 0', { fontSize: '20px', color: '#444', fontStyle: 'bold' });
+    this.timeText = this.add.text(width - 56, 108, '⏱ 45', { fontSize: '20px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0);
+    const pet = addCharacter(this, width / 2, 112, 40);
+    bobTween(this, pet);
+
+    this.tiles = [];
+    this.buildRound();
+    this.clock = this.time.addEvent({ delay: 1000, loop: true, callback: () => this.tick() });
+  }
+  buildRound() {
+    this.tiles.forEach(shape => shape.destroy());
+    this.tiles = [];
+    const { width, height } = this.scale;
+    const n = this.gridSize;
+    const total = n * n;
+    const oddIdx = Phaser.Math.Between(0, total - 1);
+    const baseColor = Phaser.Utils.Array.GetRandom(COLORS).hex;
+    const oddColor = Phaser.Display.Color.IntegerToColor(baseColor).brighten(35).color;
+
+    const gridSize = Math.min(width, height) * 0.74;
+    const cell = gridSize / n;
+    const originX = width / 2 - gridSize / 2;
+    const originY = height * 0.39;
+
+    for (let i = 0; i < total; i++) {
+      const row = Math.floor(i / n), col = i % n;
+      const x = originX + col * cell + cell / 2;
+      const y = originY + row * cell + cell / 2;
+      const isOdd = i === oddIdx;
+      const shape = this.add.circle(x, y, cell * 0.32, isOdd ? oddColor : baseColor).setInteractive();
+      shape.isOdd = isOdd;
+      shape.on('pointerdown', () => this.tap(shape));
+      this.tiles.push(shape);
+    }
+  }
+  tap(shape) {
+    if (shape.isOdd) {
+      sfxCorrect();
+      this.score++;
+      this.scoreText.setText(`⭐ ${this.score}`);
+      this.buildRound();
+    } else {
+      sfxWrong();
+    }
+  }
+  tick() {
+    this.timeLeft--;
+    this.timeText.setText(`⏱ ${this.timeLeft}`);
+    if (this.timeLeft <= 0) this.endGame();
+  }
+  endGame() {
+    this.clock.remove();
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, `🎉 完成！分數 ${this.score}`, { fontSize: '26px' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
+class MazeScene extends Phaser.Scene {
+  constructor() { super('Maze'); }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.finished = false;
+    this.dragging = false;
+    this.offPath = false;
+    this.tolerance = 38;
+
+    addHeader(this, MAZE_INSTR);
+    this.hearts = makeHearts(this, 56, 108, 5);
+
+    const top = 190, bottom = height - 50;
+    const xs = [width * 0.3, width * 0.7, width * 0.25, width * 0.75, width * 0.35, width * 0.65];
+    this.points = xs.map((x, i) => ({ x, y: top + (bottom - top) * i / (xs.length - 1) }));
+    const last = this.points[this.points.length - 1];
+
+    const g = this.add.graphics();
+    g.lineStyle(this.tolerance * 2, 0xffe0ea, 1);
+    this.drawPath(g);
+    g.lineStyle(3, 0xff8fab, 1);
+    this.drawPath(g);
+
+    this.add.circle(this.points[0].x, this.points[0].y, 14, 0x4caf78);
+    this.add.star(last.x, last.y, 5, 10, 18, 0xffd23f);
+    this.runner = addCharacter(this, this.points[0].x, this.points[0].y, 44);
+
+    this.input.on('pointerdown', (p) => { this.dragging = true; this.runner.setPosition(p.x, p.y); });
+    this.input.on('pointerup', () => { this.dragging = false; });
+    this.input.on('pointermove', (p) => {
+      if (!this.dragging || this.finished) return;
+      this.runner.setPosition(p.x, p.y);
+      const dist = this.distToPath(p.x, p.y);
+      if (dist > this.tolerance) {
+        if (!this.offPath) { this.offPath = true; this.loseLife(); }
+      } else {
+        this.offPath = false;
+        if (Phaser.Math.Distance.Between(p.x, p.y, last.x, last.y) < 30) this.win();
+      }
+    });
+  }
+  drawPath(g) {
+    g.beginPath();
+    g.moveTo(this.points[0].x, this.points[0].y);
+    this.points.slice(1).forEach(pt => g.lineTo(pt.x, pt.y));
+    g.strokePath();
+  }
+  distToPath(x, y) {
+    let min = Infinity;
+    for (let i = 0; i < this.points.length - 1; i++) {
+      min = Math.min(min, this.distToSeg(x, y, this.points[i], this.points[i + 1]));
+    }
+    return min;
+  }
+  distToSeg(x, y, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy || 1;
+    let t = Phaser.Math.Clamp(((x - a.x) * dx + (y - a.y) * dy) / len2, 0, 1);
+    return Phaser.Math.Distance.Between(x, y, a.x + t * dx, a.y + t * dy);
+  }
+  loseLife() {
+    this.lives--;
+    this.hearts[this.lives].setText('🖤');
+    sfxWrong();
+    if (this.lives <= 0) this.endGame(false);
+  }
+  win() { this.endGame(true); }
+  endGame(success) {
+    this.finished = true;
+    this.dragging = false;
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, success ? '🎉 到達終點！' : '💔 愛心用光了！', { fontSize: '26px' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
+class BubbleScene extends Phaser.Scene {
+  constructor() { super('Bubble'); }
+  init(data) { this.level = data.level || 1; }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.score = 0;
+    this.colorCount = Math.min(3 + this.level, COLORS.length);
+    this.target = Phaser.Utils.Array.GetRandom(COLORS.slice(0, this.colorCount));
+    this.spawnDelay = Math.max(800 - this.level * 120, 350);
+    this.finished = false;
+
+    addHeader(this, BUBBLE_INSTR);
+    this.add.circle(26, 108, 13, this.target.hex).setStrokeStyle(2, 0x555555);
+    this.hearts = makeHearts(this, 56, 108, 5);
+    this.scoreText = this.add.text(width - 20, 108, '⭐ 0', { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+
+    addCharacter(this, width / 2, height - 50, 70);
+
+    this.bubbles = [];
+    this.spawnTimer = this.time.addEvent({ delay: this.spawnDelay, loop: true, callback: () => this.spawnBubble() });
+  }
+  spawnBubble() {
+    const { width, height } = this.scale;
+    const c = Phaser.Utils.Array.GetRandom(COLORS.slice(0, this.colorCount));
+    const x = Phaser.Math.Between(40, width - 40);
+    const bubble = this.add.circle(x, height + 20, 26, c.hex, 0.85).setStrokeStyle(2, 0xffffff).setInteractive();
+    bubble.colorData = c;
+    bubble.on('pointerdown', () => this.pop(bubble));
+    this.bubbles.push(bubble);
+  }
+  pop(bubble) {
+    if (this.finished) return;
+    if (bubble.colorData === this.target) {
+      this.score++;
+      this.scoreText.setText(`⭐ ${this.score}`);
+      popupText(this, bubble.x, bubble.y, '✓', '#4caf78');
+      sfxCorrect();
+    } else {
+      sfxWrong();
+      popupText(this, bubble.x, bubble.y, '✕', '#ff5c7a');
+      this.loseLife();
+    }
+    bubble.destroy();
+    this.bubbles = this.bubbles.filter(b => b !== bubble);
+  }
+  loseLife() {
+    this.lives--;
+    this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) this.endGame();
+  }
+  update() {
+    if (this.finished) return;
+    for (let i = this.bubbles.length - 1; i >= 0; i--) {
+      const b = this.bubbles[i];
+      b.y -= 1.6 + this.level * 0.4;
+      if (b.y < -30) { b.destroy(); this.bubbles.splice(i, 1); }
+    }
+  }
+  endGame() {
+    this.finished = true;
+    this.spawnTimer.remove();
+    this.bubbles.forEach(b => b.destroy());
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, `🎉 完成！分數 ${this.score}`, { fontSize: '26px' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
+class RhythmScene extends Phaser.Scene {
+  constructor() { super('Rhythm'); }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.combo = 0;
+    this.maxCombo = 0;
+    this.targetRadius = 60;
+    this.tolerance = 16;
+    this.growSpeed = 70;
+    this.maxRadius = 150;
+    this.radius = 10;
+    this.active = true;
+
+    addHeader(this, RHYTHM_INSTR);
+    this.hearts = makeHearts(this, 56, 108, 5);
+    this.comboText = this.add.text(width - 20, 108, '連續: 0', { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+
+    this.cx = width / 2; this.cy = height * 0.46;
+    this.add.circle(this.cx, this.cy, this.targetRadius, 0xffffff, 0).setStrokeStyle(4, 0xff8fab);
+    this.ringGraphics = this.add.graphics();
+
+    const pet = addCharacter(this, width / 2, height * 0.78, 70);
+    bobTween(this, pet);
+
+    this.input.on('pointerdown', () => this.tapNow());
+  }
+  tapNow() {
+    if (!this.active) return;
+    if (Math.abs(this.radius - this.targetRadius) <= this.tolerance) {
+      sfxCorrect();
+      this.combo++;
+      this.maxCombo = Math.max(this.maxCombo, this.combo);
+      this.comboText.setText(`連續: ${this.combo}`);
+      popupText(this, this.cx, this.cy, '✓', '#4caf78');
+      this.growSpeed = Math.min(this.growSpeed + 4, 160);
+    } else {
+      this.miss();
+    }
+    this.radius = 10;
+  }
+  miss() {
+    sfxWrong();
+    this.combo = 0;
+    this.comboText.setText('連續: 0');
+    popupText(this, this.cx, this.cy, '✕', '#ff5c7a');
+    this.lives--;
+    this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) this.endGame();
+  }
+  update(time, delta) {
+    if (!this.active) return;
+    this.radius += this.growSpeed * delta / 1000;
+    this.ringGraphics.clear();
+    this.ringGraphics.lineStyle(4, 0xb185db, 1);
+    this.ringGraphics.strokeCircle(this.cx, this.cy, this.radius);
+    if (this.radius > this.maxRadius) {
+      this.radius = 10;
+      this.miss();
+    }
+  }
+  endGame() {
+    this.active = false;
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, `🎉 最高連續 ${this.maxCombo} 次！`, { fontSize: '24px' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
+const config = {
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: Math.min(window.innerWidth, 480),
+  height: Math.min(window.innerHeight, 854),
+  backgroundColor: '#fdeef4',
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scene: [BootScene, CharSelectScene, MenuScene, StarCatcherScene, SchulteScene, MemoryScene, SimonScene, OddOneOutScene, MazeScene, BubbleScene, RhythmScene],
+};
+
+new Phaser.Game(config);
