@@ -74,18 +74,29 @@ function addBackButton(scene) {
 
 function annotatedInstruction(scene, y, pairs) {
   const { width } = scene.scale;
-  const gap = Math.min(34, (width * 0.94) / pairs.length);
+  const gap = Math.min(36, (width * 0.94) / pairs.length);
   const totalWidth = gap * pairs.length;
   const startX = width / 2 - totalWidth / 2 + gap / 2;
+  const lineH = 13;
   pairs.forEach(([ch, zy], i) => {
     const cx = startX + i * gap;
     if (zy) {
-      const symbols = Array.from(zy);
+      let tone = null, base = zy;
+      if (base.startsWith('˙')) { tone = '˙'; base = base.slice(1); }
+      else if (/[ˊˇˋ]$/.test(base)) { tone = base.slice(-1); base = base.slice(0, -1); }
+      const symbols = Array.from(base);
       symbols.forEach((sym, j) => {
-        const sy = y - 16 - (symbols.length - 1 - j) * 11;
-        const symText = scene.add.text(cx, sy, sym, { fontSize: '13px', color: '#ff5c7a', fontStyle: 'bold' }).setOrigin(0.5);
+        const sy = y - 18 - (symbols.length - 1 - j) * lineH;
+        const symText = scene.add.text(cx, sy, sym, { fontSize: '15px', color: '#ff5c7a', fontStyle: 'bold' }).setOrigin(0.5);
         if (symText.width > gap - 1) symText.setScale((gap - 1) / symText.width);
       });
+      const topY = y - 18 - (symbols.length - 1) * lineH;
+      const bottomY = y - 18;
+      if (tone === '˙') {
+        scene.add.text(cx, topY - lineH + 2, '˙', { fontSize: '14px', color: '#ff5c7a', fontStyle: 'bold' }).setOrigin(0.5);
+      } else if (tone) {
+        scene.add.text(cx + gap * 0.34, bottomY - 4, tone, { fontSize: '13px', color: '#ff5c7a', fontStyle: 'bold' }).setOrigin(0.5);
+      }
     }
     scene.add.text(cx, y, ch, { fontSize: '26px', color: '#666', fontFamily: 'sans-serif' }).setOrigin(0.5);
   });
@@ -112,8 +123,42 @@ function getGirlName() {
 function setGirlName(name) {
   if (name && name.trim()) localStorage.setItem('fgGirlName', name.trim().slice(0, 6));
 }
+function resetGirlName() {
+  localStorage.removeItem('fgGirlName');
+}
+const NAME_PRESETS = ['扉扉', '澄澄'];
 function gameTitle() {
   return `${getGirlName()}大冒險`;
+}
+
+const DIFFICULTY_PRESETS = {
+  StarCatcher: { 簡單: { level: 1 }, 普通: { level: 2 }, 困難: { level: 4 } },
+  Schulte: { 簡單: { size: 3 }, 普通: { size: 4 }, 困難: { size: 5 } },
+  Memory: { 簡單: { pairs: 4 }, 普通: { pairs: 6 }, 困難: { pairs: 8 } },
+  Simon: { 簡單: { speed: 850 }, 普通: { speed: 650 }, 困難: { speed: 450 } },
+  OddOneOut: { 簡單: { level: 1, time: 60 }, 普通: { level: 3, time: 45 }, 困難: { level: 5, time: 30 } },
+  Maze: { 簡單: { tolerance: 50 }, 普通: { tolerance: 38 }, 困難: { tolerance: 26 } },
+  Bubble: { 簡單: { level: 1 }, 普通: { level: 2 }, 困難: { level: 4 } },
+  Rhythm: { 簡單: { tolerance: 22, growSpeed: 55 }, 普通: { tolerance: 16, growSpeed: 70 }, 困難: { tolerance: 10, growSpeed: 90 } },
+};
+
+class DifficultyScene extends Phaser.Scene {
+  constructor() { super('Difficulty'); }
+  init(data) { this.targetScene = data.scene; this.icon = data.icon; this.label = data.label; }
+  create() {
+    const { width, height } = this.scale;
+    addBackButton(this);
+    this.add.text(width / 2, height * 0.2, `${this.icon} ${this.label}`, { fontSize: '26px', color: '#444', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(width / 2, height * 0.28, '選擇難度', { fontSize: '18px', color: '#777' }).setOrigin(0.5);
+
+    const presets = DIFFICULTY_PRESETS[this.targetScene];
+    Object.keys(presets).forEach((diff, i) => {
+      const y = height * (0.42 + i * 0.14);
+      const btn = this.add.rectangle(width / 2, y, 220, 64, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+      this.add.text(width / 2, y, diff, { fontSize: '22px', color: '#444' }).setOrigin(0.5);
+      pressEffect(this, btn, () => this.scene.start(this.targetScene, presets[diff]));
+    });
+  }
 }
 
 function addCharacter(scene, x, y, size) {
@@ -134,11 +179,22 @@ class CharSelectScene extends Phaser.Scene {
     this.makeCharCard(width / 2 - 90, height * 0.45, 'girl', getGirlName());
     this.makeCharCard(width / 2 + 90, height * 0.45, 'cat', '小貓咪');
 
-    const editBtn = this.add.text(width / 2, height * 0.45 + 100, '✏️ 改名字', { fontSize: '15px', color: '#999' }).setOrigin(0.5).setInteractive();
-    pressEffect(this, editBtn, () => {
+    const chipY = height * 0.45 + 95;
+    const chipGap = 80;
+    const chipStartX = width / 2 - chipGap * (NAME_PRESETS.length) / 2 + chipGap / 2;
+    NAME_PRESETS.forEach((name, i) => {
+      const chip = this.add.rectangle(chipStartX + i * chipGap, chipY, 70, 36, 0xffffff).setStrokeStyle(3, 0xb185db).setInteractive();
+      this.add.text(chipStartX + i * chipGap, chipY, name, { fontSize: '15px', color: '#444' }).setOrigin(0.5);
+      pressEffect(this, chip, () => { setGirlName(name); this.scene.restart(); });
+    });
+
+    const customBtn = this.add.text(width / 2 - 45, chipY + 36, '✏️ 自訂', { fontSize: '14px', color: '#999' }).setOrigin(0.5).setInteractive();
+    pressEffect(this, customBtn, () => {
       const name = window.prompt('幫女孩取個名字：', getGirlName());
       if (name) { setGirlName(name); this.scene.restart(); }
     });
+    const resetBtn = this.add.text(width / 2 + 45, chipY + 36, '↺ 重置', { fontSize: '14px', color: '#999' }).setOrigin(0.5).setInteractive();
+    pressEffect(this, resetBtn, () => { resetGirlName(); this.scene.restart(); });
   }
   makeCharCard(x, y, key, label) {
     const card = this.add.rectangle(x, y, 140, 170, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
@@ -164,25 +220,25 @@ class MenuScene extends Phaser.Scene {
     this.add.text(width / 2, height * 0.23, '選一個遊戲開始吧！', { fontSize: '18px', color: '#777' }).setOrigin(0.5);
 
     const levels = [
-      ['⭐', '接星星', () => this.scene.start('StarCatcher', { level: 1 })],
-      ['🔢', '數字方格', () => this.scene.start('Schulte', { size: 4 })],
-      ['🃏', '記憶翻牌', () => this.scene.start('Memory', { pairs: 6 })],
-      ['🎵', '顏色複誦', () => this.scene.start('Simon')],
-      ['🔍', '找不同', () => this.scene.start('OddOneOut', { level: 1 })],
-      ['🧵', '走迷宮', () => this.scene.start('Maze')],
-      ['🫧', '數泡泡', () => this.scene.start('Bubble', { level: 1 })],
-      ['🥁', '節奏拍拍', () => this.scene.start('Rhythm')],
+      ['⭐', '接星星', 'StarCatcher'],
+      ['🔢', '數字方格', 'Schulte'],
+      ['🃏', '記憶翻牌', 'Memory'],
+      ['🎵', '顏色複誦', 'Simon'],
+      ['🔍', '找不同', 'OddOneOut'],
+      ['🧵', '走迷宮', 'Maze'],
+      ['🫧', '數泡泡', 'Bubble'],
+      ['🥁', '節奏拍拍', 'Rhythm'],
     ];
     const cols = 4;
     const pad = width * 0.04;
     const size = (width - pad * (cols + 1)) / cols;
     const startX = pad + size / 2;
     const startY = height * 0.4;
-    levels.forEach(([icon, label, onClick], i) => {
+    levels.forEach(([icon, label, sceneKey], i) => {
       const col = i % cols, row = Math.floor(i / cols);
       const x = startX + col * (size + pad);
       const y = startY + row * (size + pad + 20);
-      this.makeSquare(x, y, size, icon, label, onClick);
+      this.makeSquare(x, y, size, icon, label, () => this.scene.start('Difficulty', { scene: sceneKey, icon, label }));
     });
   }
   makeSquare(x, y, size, icon, label, onClick) {
@@ -421,6 +477,7 @@ class MemoryScene extends Phaser.Scene {
 
 class SimonScene extends Phaser.Scene {
   constructor() { super('Simon'); }
+  init(data) { this.speed = data.speed || 650; }
   create() {
     const { width, height } = this.scale;
     addHeader(this, SIMON_INSTR);
@@ -453,8 +510,8 @@ class SimonScene extends Phaser.Scene {
     this.time.delayedCall(500, () => this.playSequence());
   }
   playSequence() {
-    this.sequence.forEach((idx, i) => this.time.delayedCall(i * 650, () => this.flash(idx)));
-    this.time.delayedCall(this.sequence.length * 650 + 200, () => { this.accepting = true; });
+    this.sequence.forEach((idx, i) => this.time.delayedCall(i * this.speed, () => this.flash(idx)));
+    this.time.delayedCall(this.sequence.length * this.speed + 200, () => { this.accepting = true; });
   }
   flash(idx) {
     const btn = this.buttons[idx];
@@ -483,7 +540,7 @@ class SimonScene extends Phaser.Scene {
     this.add.text(width / 2, height / 2 - 50, `🎉 過了 ${this.sequence.length - 1} 關！`, { fontSize: '24px', color: '#444' }).setOrigin(0.5);
     const again = this.add.rectangle(width / 2, height / 2 + 30, 220, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
     this.add.text(width / 2, height / 2 + 30, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
-    pressEffect(this, again, () => this.scene.start('Simon'));
+    pressEffect(this, again, () => this.scene.start('Simon', { speed: this.speed }));
     const menu = this.add.rectangle(width / 2, height / 2 + 100, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
     this.add.text(width / 2, height / 2 + 100, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
     pressEffect(this, menu, () => this.scene.start('Menu'));
