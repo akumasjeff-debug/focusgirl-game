@@ -549,16 +549,15 @@ class SimonScene extends Phaser.Scene {
 
 class OddOneOutScene extends Phaser.Scene {
   constructor() { super('OddOneOut'); }
-  init(data) { this.level = data.level || 1; }
+  init(data) { this.level = data.level || 1; this.timeLeft = data.time || 45; }
   create() {
     const { width, height } = this.scale;
     this.score = 0;
-    this.timeLeft = 45;
     this.gridSize = Math.min(4 + Math.floor(this.level / 2), 6);
 
     addHeader(this, ODD_INSTR);
     this.scoreText = this.add.text(56, 136, '⭐ 0', { fontSize: '20px', color: '#444', fontStyle: 'bold' });
-    this.timeText = this.add.text(width - 56, 136, '⏱ 45', { fontSize: '20px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0);
+    this.timeText = this.add.text(width - 56, 136, `⏱ ${this.timeLeft}`, { fontSize: '20px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0);
     const pet = addCharacter(this, width / 2, 140, 40);
     bobTween(this, pet);
 
@@ -621,13 +620,13 @@ class OddOneOutScene extends Phaser.Scene {
 
 class MazeScene extends Phaser.Scene {
   constructor() { super('Maze'); }
+  init(data) { this.tolerance = data.tolerance || 38; }
   create() {
     const { width, height } = this.scale;
     this.lives = 5;
     this.finished = false;
     this.dragging = false;
     this.offPath = false;
-    this.tolerance = 38;
 
     addHeader(this, MAZE_INSTR);
     this.hearts = makeHearts(this, 56, 136, 5);
