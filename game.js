@@ -137,7 +137,11 @@ const DIFFICULTY_PRESETS = {
   Memory: { 簡單: { pairs: 4 }, 普通: { pairs: 6 }, 困難: { pairs: 8 } },
   Simon: { 簡單: { speed: 850 }, 普通: { speed: 650 }, 困難: { speed: 450 } },
   OddOneOut: { 簡單: { level: 1, time: 60 }, 普通: { level: 3, time: 45 }, 困難: { level: 5, time: 30 } },
-  Maze: { 簡單: { tolerance: 50 }, 普通: { tolerance: 38 }, 困難: { tolerance: 26 } },
+  Maze: {
+    簡單: { tolerance: 50, points: 6, scroll: 0 },
+    普通: { tolerance: 38, points: 7, scroll: 0 },
+    困難: { tolerance: 26, points: 10, scroll: 45 },
+  },
   Bubble: { 簡單: { level: 1 }, 普通: { level: 2 }, 困難: { level: 4 } },
   Rhythm: { 簡單: { tolerance: 22, growSpeed: 55 }, 普通: { tolerance: 16, growSpeed: 70 }, 困難: { tolerance: 10, growSpeed: 90 } },
 };
@@ -620,44 +624,58 @@ class OddOneOutScene extends Phaser.Scene {
 
 class MazeScene extends Phaser.Scene {
   constructor() { super('Maze'); }
-  init(data) { this.tolerance = data.tolerance || 38; }
+  init(data) {
+    this.tolerance = data.tolerance || 38;
+    this.scrollSpeed = data.scroll || 0;
+    this.pointCount = data.points || 6;
+  }
   create() {
     const { width, height } = this.scale;
     this.lives = 5;
     this.finished = false;
     this.dragging = false;
     this.offPath = false;
+    this.started = this.scrollSpeed <= 0;
+    this.startTimer = 0;
+    this.startDeadline = 4000;
+    this.lastPointer = null;
 
     addHeader(this, MAZE_INSTR);
     this.hearts = makeHearts(this, 56, 136, 5);
 
     const top = 218, bottom = height - 50;
-    const xs = [width * 0.3, width * 0.7, width * 0.25, width * 0.75, width * 0.35, width * 0.65];
+    const xs = Array.from({ length: this.pointCount }, (_, i) =>
+      i % 2 === 0 ? Phaser.Math.Between(width * 0.22, width * 0.35) : Phaser.Math.Between(width * 0.65, width * 0.78)
+    );
     this.points = xs.map((x, i) => ({ x, y: top + (bottom - top) * i / (xs.length - 1) }));
-    const last = this.points[this.points.length - 1];
+    this.last = this.points[this.points.length - 1];
 
+    this.mazeContainer = this.add.container(0, 0);
     const g = this.add.graphics();
     g.lineStyle(this.tolerance * 2, 0xffe0ea, 1);
     this.drawPath(g);
     g.lineStyle(3, 0xff8fab, 1);
     this.drawPath(g);
+    const startDot = this.add.circle(this.points[0].x, this.points[0].y, 14, 0x4caf78);
+    const endStar = this.add.star(this.last.x, this.last.y, 5, 10, 18, 0xffd23f);
+    this.mazeContainer.add([g, startDot, endStar]);
 
-    this.add.circle(this.points[0].x, this.points[0].y, 14, 0x4caf78);
-    this.add.star(last.x, last.y, 5, 10, 18, 0xffd23f);
     this.runner = addCharacter(this, this.points[0].x, this.points[0].y, 44);
 
-    this.input.on('pointerdown', (p) => { this.dragging = true; this.runner.setPosition(p.x, p.y); });
+    if (this.scrollSpeed > 0) {
+      this.countdownText = this.add.text(width / 2, 150, '⏱ 4 出發！', { fontSize: '18px', color: '#ff5c7a', fontStyle: 'bold' }).setOrigin(0.5);
+    }
+
+    this.input.on('pointerdown', (p) => {
+      this.dragging = true;
+      this.started = true;
+      if (this.countdownText) this.countdownText.setVisible(false);
+      this.lastPointer = { x: p.x, y: p.y };
+    });
     this.input.on('pointerup', () => { this.dragging = false; });
     this.input.on('pointermove', (p) => {
       if (!this.dragging || this.finished) return;
-      this.runner.setPosition(p.x, p.y);
-      const dist = this.distToPath(p.x, p.y);
-      if (dist > this.tolerance) {
-        if (!this.offPath) { this.offPath = true; this.loseLife(); }
-      } else {
-        this.offPath = false;
-        if (Phaser.Math.Distance.Between(p.x, p.y, last.x, last.y) < 30) this.win();
-      }
+      this.lastPointer = { x: p.x, y: p.y };
     });
   }
   drawPath(g) {
@@ -666,18 +684,50 @@ class MazeScene extends Phaser.Scene {
     this.points.slice(1).forEach(pt => g.lineTo(pt.x, pt.y));
     g.strokePath();
   }
-  distToPath(x, y) {
-    let min = Infinity;
+  nearestOnPath(x, y) {
+    const oy = this.mazeContainer.y;
+    let best = null, bestDist = Infinity;
     for (let i = 0; i < this.points.length - 1; i++) {
-      min = Math.min(min, this.distToSeg(x, y, this.points[i], this.points[i + 1]));
+      const a = { x: this.points[i].x, y: this.points[i].y + oy };
+      const b = { x: this.points[i + 1].x, y: this.points[i + 1].y + oy };
+      const c = this.closestOnSeg(x, y, a, b);
+      const d = Phaser.Math.Distance.Between(x, y, c.x, c.y);
+      if (d < bestDist) { bestDist = d; best = c; }
     }
-    return min;
+    return { point: best, dist: bestDist };
   }
-  distToSeg(x, y, a, b) {
+  closestOnSeg(x, y, a, b) {
     const dx = b.x - a.x, dy = b.y - a.y;
     const len2 = dx * dx + dy * dy || 1;
-    let t = Phaser.Math.Clamp(((x - a.x) * dx + (y - a.y) * dy) / len2, 0, 1);
-    return Phaser.Math.Distance.Between(x, y, a.x + t * dx, a.y + t * dy);
+    const t = Phaser.Math.Clamp(((x - a.x) * dx + (y - a.y) * dy) / len2, 0, 1);
+    return { x: a.x + t * dx, y: a.y + t * dy };
+  }
+  trackRunner() {
+    if (!this.lastPointer) return;
+    const { x, y } = this.lastPointer;
+    const { point, dist } = this.nearestOnPath(x, y);
+    if (dist > this.tolerance) {
+      const angle = Phaser.Math.Angle.Between(point.x, point.y, x, y);
+      this.runner.setPosition(point.x + Math.cos(angle) * this.tolerance, point.y + Math.sin(angle) * this.tolerance);
+      if (!this.offPath) { this.offPath = true; this.loseLife(); }
+    } else {
+      this.runner.setPosition(x, y);
+      this.offPath = false;
+      const oy = this.mazeContainer.y;
+      if (Phaser.Math.Distance.Between(x, y, this.last.x, this.last.y + oy) < 30) this.win();
+    }
+  }
+  update(time, delta) {
+    if (this.finished) return;
+    if (!this.started) {
+      this.startTimer += delta;
+      const remain = Math.max(0, Math.ceil((this.startDeadline - this.startTimer) / 1000));
+      if (this.countdownText) this.countdownText.setText(`⏱ ${remain} 出發！`);
+      if (this.startTimer >= this.startDeadline) { this.endGame(false); }
+      return;
+    }
+    if (this.dragging) this.trackRunner();
+    if (this.scrollSpeed > 0) this.mazeContainer.y += this.scrollSpeed * delta / 1000;
   }
   loseLife() {
     this.lives--;
