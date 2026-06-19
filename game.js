@@ -17,6 +17,9 @@ const ODD_INSTR = [['快', 'ㄎㄨㄞˋ'], ['找', 'ㄓㄠˇ'], ['出', 'ㄔㄨ'
 const MAZE_INSTR = [['手', 'ㄕㄡˇ'], ['指', 'ㄓˇ'], ['沿', 'ㄧㄢˊ'], ['著', '˙ㄓㄜ'], ['路', 'ㄌㄨˋ'], ['線', 'ㄒㄧㄢˋ'], ['滑', 'ㄏㄨㄚˊ'], ['到', 'ㄉㄠˋ'], ['終', 'ㄓㄨㄥ'], ['點', 'ㄉㄧㄢˇ'], ['！', '']];
 const BUBBLE_INSTR = [['點', 'ㄉㄧㄢˇ'], ['破', 'ㄆㄛˋ'], ['這', 'ㄓㄜˋ'], ['個', 'ㄍㄜˋ'], ['顏', 'ㄧㄢˊ'], ['色', 'ㄙㄜˋ'], ['的', '˙ㄉㄜ'], ['泡', 'ㄆㄠˋ'], ['泡', 'ㄆㄠˋ'], ['！', '']];
 const RHYTHM_INSTR = [['看', 'ㄎㄢˋ'], ['圓', 'ㄩㄢˊ'], ['圈', 'ㄑㄩㄢ'], ['長', 'ㄓㄤˇ'], ['到', 'ㄉㄠˋ'], ['剛', 'ㄍㄤ'], ['好', 'ㄏㄠˇ'], ['的', '˙ㄉㄜ'], ['時', 'ㄕˊ'], ['候', 'ㄏㄡˋ'], ['點', 'ㄉㄧㄢˇ'], ['一', 'ㄧ'], ['下', 'ㄒㄧㄚˋ'], ['！', '']];
+const PUZZLE_INSTR = [['點', 'ㄉㄧㄢˇ'], ['兩', 'ㄌㄧㄤˇ'], ['塊', 'ㄎㄨㄞˋ'], ['拼', 'ㄆㄧㄣ'], ['圖', 'ㄊㄨˊ'], ['交', 'ㄐㄧㄠ'], ['換', 'ㄏㄨㄢˋ'], ['位', 'ㄨㄟˋ'], ['置', 'ㄓˋ'], ['！', '']];
+const CONNECT_INSTR = [['用', 'ㄩㄥˋ'], ['手', 'ㄕㄡˇ'], ['指', 'ㄓˇ'], ['畫', 'ㄏㄨㄚˋ'], ['線', 'ㄒㄧㄢˋ'], ['連', 'ㄌㄧㄢˊ'], ['到', 'ㄉㄠˋ'], ['下', 'ㄒㄧㄚˋ'], ['一', 'ㄧ'], ['個', 'ㄍㄜˋ'], ['數', 'ㄕㄨˋ'], ['字', 'ㄗˋ'], ['！', '']];
+const MISSING_INSTR = [['快', 'ㄎㄨㄞˋ'], ['找', 'ㄓㄠˇ'], ['出', 'ㄔㄨ'], ['缺', 'ㄑㄩㄝ'], ['一', 'ㄧ'], ['角', 'ㄐㄧㄠˇ'], ['的', '˙ㄉㄜ'], ['那', 'ㄋㄚˋ'], ['一', 'ㄧ'], ['個', 'ㄍㄜˋ'], ['！', '']];
 
 class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -144,6 +147,9 @@ const DIFFICULTY_PRESETS = {
   },
   Bubble: { 簡單: { level: 1 }, 普通: { level: 2 }, 困難: { level: 4 } },
   Rhythm: { 簡單: { tolerance: 22, growSpeed: 55 }, 普通: { tolerance: 16, growSpeed: 70 }, 困難: { tolerance: 10, growSpeed: 90 } },
+  Puzzle: { 簡單: { grid: 2 }, 普通: { grid: 3 }, 困難: { grid: 4 } },
+  Connect: { 簡單: { count: 6 }, 普通: { count: 8 }, 困難: { count: 12 } },
+  MissingPiece: { 簡單: { grid: 3, time: 50 }, 普通: { grid: 4, time: 40 }, 困難: { grid: 6, time: 30 } },
 };
 
 class DifficultyScene extends Phaser.Scene {
@@ -232,6 +238,9 @@ class MenuScene extends Phaser.Scene {
       ['🧵', '走迷宮', 'Maze'],
       ['🫧', '數泡泡', 'Bubble'],
       ['🥁', '節奏拍拍', 'Rhythm'],
+      ['🧩', '拼圖還原', 'Puzzle'],
+      ['🔗', '連連看', 'Connect'],
+      ['🍩', '找缺角', 'MissingPiece'],
     ];
     const cols = 4;
     const pad = width * 0.04;
@@ -895,6 +904,240 @@ class RhythmScene extends Phaser.Scene {
   }
 }
 
+class PuzzleScene extends Phaser.Scene {
+  constructor() { super('Puzzle'); }
+  init(data) { this.gridSize = data.grid || 3; }
+  create() {
+    const { width, height } = this.scale;
+    addHeader(this, PUZZLE_INSTR);
+    this.movesText = this.add.text(56, 136, '次數: 0', { fontSize: '18px', color: '#444', fontStyle: 'bold' });
+    this.moves = 0;
+    this.first = null;
+
+    const key = this.registry.get('char') || 'girl';
+    const hasImage = this.game.loadedChars && this.game.loadedChars[key];
+
+    const n = this.gridSize;
+    const boardSize = Math.min(width, height) * 0.7;
+    this.cell = boardSize / n;
+    this.originX = width / 2 - boardSize / 2;
+    this.originY = height * 0.42;
+    this.n = n;
+
+    let srcW = 0, srcH = 0;
+    if (hasImage) {
+      const src = this.textures.get(key).getSourceImage();
+      srcW = src.width; srcH = src.height;
+    }
+
+    const order = Phaser.Utils.Array.Shuffle(Phaser.Utils.Array.NumberArray(0, n * n - 1));
+    this.tiles = order.map((pieceIdx, slotIdx) => {
+      const pos = this.slotPos(slotIdx);
+      let obj;
+      if (hasImage) {
+        obj = this.add.image(pos.x, pos.y, key);
+        const pr = Math.floor(pieceIdx / n), pc = pieceIdx % n;
+        obj.setCrop(pc * (srcW / n), pr * (srcH / n), srcW / n, srcH / n);
+        obj.setDisplaySize(this.cell - 6, this.cell - 6);
+      } else {
+        const hue = Math.floor((pieceIdx / (n * n)) * 360);
+        obj = this.add.rectangle(pos.x, pos.y, this.cell - 6, this.cell - 6, Phaser.Display.Color.HSVColorWheel()[hue].color);
+      }
+      const label = this.add.text(pos.x, pos.y, String(pieceIdx + 1), { fontSize: '14px', color: '#fff', fontStyle: 'bold', stroke: '#444', strokeThickness: 3 }).setOrigin(0.5);
+      const zone = this.add.zone(pos.x, pos.y, this.cell, this.cell).setInteractive();
+      const tile = { obj, label, zone, pieceIdx, slotIdx };
+      zone.on('pointerdown', () => this.select(tile));
+      return tile;
+    });
+  }
+  slotPos(slotIdx) {
+    const row = Math.floor(slotIdx / this.n), col = slotIdx % this.n;
+    return { x: this.originX + col * this.cell + this.cell / 2, y: this.originY + row * this.cell + this.cell / 2 };
+  }
+  select(tile) {
+    if (this.locked) return;
+    if (tile === this.first) { tile.obj.setAlpha(1); this.first = null; return; }
+    if (!this.first) { this.first = tile; tile.obj.setAlpha(0.55); return; }
+    const a = this.first, b = tile;
+    const tmp = a.slotIdx; a.slotIdx = b.slotIdx; b.slotIdx = tmp;
+    [a, b].forEach(t => {
+      const pos = this.slotPos(t.slotIdx);
+      t.obj.setPosition(pos.x, pos.y);
+      t.label.setPosition(pos.x, pos.y);
+      t.zone.setPosition(pos.x, pos.y);
+    });
+    a.obj.setAlpha(1);
+    this.first = null;
+    this.moves++;
+    this.movesText.setText(`次數: ${this.moves}`);
+    sfxCorrect();
+    if (this.tiles.every(t => t.pieceIdx === t.slotIdx)) this.endGame();
+  }
+  endGame() {
+    this.locked = true;
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, `🎉 拼好了！共 ${this.moves} 次`, { fontSize: '24px', color: '#444' }).setOrigin(0.5);
+    const menu = this.add.rectangle(width / 2, height / 2 + 40, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+class ConnectScene extends Phaser.Scene {
+  constructor() { super('Connect'); }
+  init(data) { this.total = data.count || 8; }
+  create() {
+    const { width, height } = this.scale;
+    addHeader(this, CONNECT_INSTR);
+    this.lives = 5;
+    this.hearts = makeHearts(this, 56, 136, 5);
+    this.next = 1;
+    this.dragging = false;
+    this.finished = false;
+    this.trail = [];
+
+    const top = 190, bottom = height - 40;
+    this.dots = [];
+    for (let i = 1; i <= this.total; i++) {
+      const x = Phaser.Math.Between(width * 0.15, width * 0.85);
+      const y = Phaser.Math.Between(top, bottom);
+      const circle = this.add.circle(x, y, 22, 0xffffff).setStrokeStyle(3, 0xb185db);
+      this.add.text(x, y, String(i), { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(0.5);
+      this.dots.push({ x, y, num: i, circle, done: false });
+    }
+
+    this.lineGraphics = this.add.graphics();
+
+    this.input.on('pointerdown', (p) => {
+      this.dragging = true;
+      this.trail = [{ x: p.x, y: p.y }];
+    });
+    this.input.on('pointerup', () => {
+      if (this.dragging && !this.finished && this.next <= this.total) this.fail();
+      this.dragging = false;
+    });
+    this.input.on('pointermove', (p) => {
+      if (!this.dragging || this.finished) return;
+      this.trail.push({ x: p.x, y: p.y });
+      this.redrawTrail();
+      const target = this.dots[this.next - 1];
+      if (target && !target.done && Phaser.Math.Distance.Between(p.x, p.y, target.x, target.y) < 26) {
+        target.done = true;
+        target.circle.setFillStyle(0x4caf78);
+        sfxCorrect();
+        this.next++;
+        if (this.next > this.total) this.win();
+      }
+    });
+  }
+  redrawTrail() {
+    this.lineGraphics.clear();
+    this.lineGraphics.lineStyle(4, 0xff8fab, 1);
+    this.lineGraphics.beginPath();
+    this.lineGraphics.moveTo(this.trail[0].x, this.trail[0].y);
+    this.trail.forEach(pt => this.lineGraphics.lineTo(pt.x, pt.y));
+    this.lineGraphics.strokePath();
+  }
+  fail() {
+    this.lives--;
+    this.hearts[this.lives].setText('🖤');
+    sfxWrong();
+    this.lineGraphics.clear();
+    this.trail = [];
+    if (this.lives <= 0) this.endGame(false);
+  }
+  win() { this.endGame(true); }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, success ? '🎉 連完了！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
+class MissingPieceScene extends Phaser.Scene {
+  constructor() { super('MissingPiece'); }
+  init(data) { this.gridSize = data.grid || 4; this.timeLeft = data.time || 40; }
+  create() {
+    const { width, height } = this.scale;
+    this.score = 0;
+    addHeader(this, MISSING_INSTR);
+    this.scoreText = this.add.text(56, 136, '⭐ 0', { fontSize: '20px', color: '#444', fontStyle: 'bold' });
+    this.timeText = this.add.text(width - 56, 136, `⏱ ${this.timeLeft}`, { fontSize: '20px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0);
+    const pet = addCharacter(this, width / 2, 140, 40);
+    bobTween(this, pet);
+
+    this.tiles = [];
+    this.buildRound();
+    this.clock = this.time.addEvent({ delay: 1000, loop: true, callback: () => this.tick() });
+  }
+  buildRound() {
+    this.tiles.forEach(t => { t.gfx.destroy(); t.zone.destroy(); });
+    this.tiles = [];
+    const { width, height } = this.scale;
+    const n = this.gridSize;
+    const total = n * n;
+    const oddIdx = Phaser.Math.Between(0, total - 1);
+    const color = Phaser.Utils.Array.GetRandom(COLORS).hex;
+
+    const gridSize = Math.min(width, height) * 0.74;
+    const cell = gridSize / n;
+    const originX = width / 2 - gridSize / 2;
+    const originY = height * 0.39 + 28;
+
+    for (let i = 0; i < total; i++) {
+      const row = Math.floor(i / n), col = i % n;
+      const x = originX + col * cell + cell / 2;
+      const y = originY + row * cell + cell / 2;
+      const r = cell * 0.32;
+      const isOdd = i === oddIdx;
+      const gfx = this.add.graphics({ x, y });
+      gfx.fillStyle(color, 1);
+      if (isOdd) {
+        gfx.slice(0, 0, r, Phaser.Math.DegToRad(25), Phaser.Math.DegToRad(335), false);
+        gfx.fillPath();
+      } else {
+        gfx.fillCircle(0, 0, r);
+      }
+      const zone = this.add.zone(x, y, cell, cell).setInteractive();
+      zone.isOdd = isOdd;
+      zone.on('pointerdown', () => this.tap(zone));
+      this.tiles.push({ gfx, zone });
+    }
+  }
+  tap(zone) {
+    if (zone.isOdd) {
+      sfxCorrect();
+      this.score++;
+      this.scoreText.setText(`⭐ ${this.score}`);
+      this.buildRound();
+    } else {
+      sfxWrong();
+    }
+  }
+  tick() {
+    this.timeLeft--;
+    this.timeText.setText(`⏱ ${this.timeLeft}`);
+    if (this.timeLeft <= 0) this.endGame();
+  }
+  endGame() {
+    this.clock.remove();
+    sfxComplete();
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
+    this.add.text(width / 2, height / 2 - 40, `🎉 完成！分數 ${this.score}`, { fontSize: '26px', color: '#444' }).setOrigin(0.5);
+    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, next, () => this.scene.start('Menu'));
+  }
+}
+
 const config = {
   type: Phaser.AUTO,
   parent: 'game',
@@ -902,7 +1145,7 @@ const config = {
   height: Math.min(window.innerHeight, 854),
   backgroundColor: '#fdeef4',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, CharSelectScene, MenuScene, StarCatcherScene, SchulteScene, MemoryScene, SimonScene, OddOneOutScene, MazeScene, BubbleScene, RhythmScene],
+  scene: [BootScene, CharSelectScene, MenuScene, DifficultyScene, StarCatcherScene, SchulteScene, MemoryScene, SimonScene, OddOneOutScene, MazeScene, BubbleScene, RhythmScene, PuzzleScene, ConnectScene, MissingPieceScene],
 };
 
 new Phaser.Game(config);
