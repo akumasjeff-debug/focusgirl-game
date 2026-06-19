@@ -36,7 +36,15 @@ class BootScene extends Phaser.Scene {
   }
 }
 
+function isMuted() {
+  return localStorage.getItem('fgMuted') === '1';
+}
+function toggleMuted() {
+  localStorage.setItem('fgMuted', isMuted() ? '0' : '1');
+}
+
 function beep(freq, duration = 0.12, type = 'sine') {
+  if (isMuted()) return;
   try {
     const ctx = window._sfxCtx || (window._sfxCtx = new (window.AudioContext || window.webkitAudioContext)());
     if (ctx.state === 'suspended') ctx.resume();
@@ -71,8 +79,17 @@ function popupText(scene, x, y, str, color) {
 }
 
 function addBackButton(scene) {
-  const btn = scene.add.text(26, 22, '🔙', { fontSize: '26px' }).setOrigin(0.5).setInteractive();
-  pressEffect(scene, btn, () => scene.scene.start('Menu'));
+  const hit = scene.add.circle(32, 28, 27, 0xffffff, 0).setInteractive();
+  scene.add.text(32, 28, '🔙', { fontSize: '32px' }).setOrigin(0.5);
+  pressEffect(scene, hit, () => scene.scene.start('Menu'));
+}
+
+function addSoundToggle(scene) {
+  const { width } = scene.scale;
+  const x = width - 32, y = 28;
+  const hit = scene.add.circle(x, y, 27, 0xffffff, 0).setInteractive();
+  const icon = scene.add.text(x, y, isMuted() ? '🔇' : '🔊', { fontSize: '28px' }).setOrigin(0.5);
+  pressEffect(scene, hit, () => { toggleMuted(); icon.setText(isMuted() ? '🔇' : '🔊'); });
 }
 
 function annotatedInstruction(scene, y, pairs) {
@@ -107,6 +124,7 @@ function annotatedInstruction(scene, y, pairs) {
 
 function addHeader(scene, instrPairs) {
   addBackButton(scene);
+  addSoundToggle(scene);
   annotatedInstruction(scene, 96, instrPairs);
 }
 
@@ -513,7 +531,14 @@ class SimonScene extends Phaser.Scene {
       return btn;
     });
 
-    this.nextRound();
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.88);
+    const ready = this.add.text(width / 2, height / 2 - 50, '準備好了嗎？', { fontSize: '22px', color: '#444', fontStyle: 'bold' }).setOrigin(0.5);
+    const startBtn = this.add.rectangle(width / 2, height / 2 + 30, 180, 64, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    const startLabel = this.add.text(width / 2, height / 2 + 30, '▶️ 開始', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, startBtn, () => {
+      [overlay, ready, startBtn, startLabel].forEach(o => o.destroy());
+      this.nextRound();
+    });
   }
   nextRound() {
     this.accepting = false;
@@ -530,6 +555,7 @@ class SimonScene extends Phaser.Scene {
     const btn = this.buttons[idx];
     beep(330 + idx * 110, 0.25);
     btn.setFillStyle(0xffffff);
+    this.tweens.add({ targets: btn, scaleX: 1.18, scaleY: 1.18, duration: 150, yoyo: true, ease: 'Sine.easeOut' });
     this.time.delayedCall(300, () => btn.setFillStyle(btn.baseColor));
   }
   onPress(idx) {
