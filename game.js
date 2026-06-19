@@ -317,12 +317,12 @@ class StarCatcherScene extends Phaser.Scene {
     star.colorData = c;
     this.falling.push(star);
   }
-  update() {
+  update(time, delta) {
     if (this.finished) return;
     const { height } = this.scale;
     for (let i = this.falling.length - 1; i >= 0; i--) {
       const star = this.falling[i];
-      star.y += 3.5 + this.level * 1.2;
+      star.y += (3.5 + this.level * 1.2) * delta / 16.67;
       if (Phaser.Math.Distance.Between(star.x, star.y, this.basket.x, this.basket.y) < 55) {
         if (star.colorData === this.target) {
           popupText(this, star.x, star.y, '✓', '#4caf78');
@@ -762,7 +762,7 @@ class MazeScene extends Phaser.Scene {
       return;
     }
     if (this.dragging) this.trackRunner();
-    if (this.scrollSpeed > 0) this.mazeContainer.y += this.scrollSpeed * delta / 1000;
+    if (this.scrollSpeed > 0) this.mazeContainer.y -= this.scrollSpeed * delta / 1000;
   }
   loseLife() {
     this.lives--;
@@ -835,11 +835,11 @@ class BubbleScene extends Phaser.Scene {
     this.hearts[this.lives].setText('🖤');
     if (this.lives <= 0) this.endGame();
   }
-  update() {
+  update(time, delta) {
     if (this.finished) return;
     for (let i = this.bubbles.length - 1; i >= 0; i--) {
       const b = this.bubbles[i];
-      b.y -= 1.6 + this.level * 0.4;
+      b.y -= (1.6 + this.level * 0.4) * delta / 16.67;
       if (b.y < -30) { b.destroy(); this.bubbles.splice(i, 1); }
     }
   }
@@ -859,14 +859,16 @@ class BubbleScene extends Phaser.Scene {
 
 class RhythmScene extends Phaser.Scene {
   constructor() { super('Rhythm'); }
+  init(data) {
+    this.tolerance = data.tolerance || 16;
+    this.growSpeed = data.growSpeed || 70;
+  }
   create() {
     const { width, height } = this.scale;
     this.lives = 5;
     this.combo = 0;
     this.maxCombo = 0;
     this.targetRadius = 60;
-    this.tolerance = 16;
-    this.growSpeed = 70;
     this.maxRadius = 150;
     this.radius = 10;
     this.active = true;
@@ -1041,7 +1043,12 @@ class ConnectScene extends Phaser.Scene {
       this.trail = [{ x: p.x, y: p.y }];
     });
     this.input.on('pointerup', () => {
-      if (this.dragging && !this.finished && this.next <= this.total) this.fail();
+      if (this.dragging && !this.finished && this.next > 1) {
+        this.next = 1;
+        this.dots.forEach(d => { d.done = false; d.circle.setFillStyle(0xffffff); });
+        this.lineGraphics.clear();
+        this.trail = [];
+      }
       this.dragging = false;
     });
     this.input.on('pointermove', (p) => {
