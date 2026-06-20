@@ -33,6 +33,13 @@ const MISSING_INSTR = [['快', 'ㄎㄨㄞˋ'], ['找', 'ㄓㄠˇ'], ['出', 'ㄔ
 const GONOGO_INSTR = [['看', 'ㄎㄢˋ'], ['到', 'ㄉㄠˋ'], ['⭐', ''], ['就', 'ㄐㄧㄡˋ'], ['點', 'ㄉㄧㄢˇ'], ['！', ''], ['看', 'ㄎㄢˋ'], ['到', 'ㄉㄠˋ'], ['❌', ''], ['別', 'ㄅㄧㄝˊ'], ['動', 'ㄉㄨㄥˋ'], ['！', '']];
 const MATHSPRINT_INSTR = [['快', 'ㄎㄨㄞˋ'], ['點', 'ㄉㄧㄢˇ'], ['出', 'ㄔㄨ'], ['正', 'ㄓㄥˋ'], ['確', 'ㄑㄩㄝˋ'], ['答', 'ㄉㄚˊ'], ['案', 'ㄢˋ'], ['！', '']];
 const STROOP_INSTR = [['點', 'ㄉㄧㄢˇ'], ['出', 'ㄔㄨ'], ['字', 'ㄗˋ'], ['的', '˙ㄉㄜ'], ['墨', 'ㄇㄛˋ'], ['水', 'ㄕㄨㄟˇ'], ['顏', 'ㄧㄢˊ'], ['色', 'ㄙㄜˋ'], ['！', '']];
+const COLORMIX_INSTR = [['這','ㄓㄜˋ'],['兩','ㄌㄧㄤˇ'],['個','ㄍㄜˋ'],['顏','ㄧㄢˊ'],['色','ㄙㄜˋ'],['混','ㄏㄨㄣˋ'],['在','ㄗㄞˋ'],['一','ㄧ'],['起','ㄑㄧˇ'],['是','ㄕˋ'],['？','']];
+const FINDSAME_INSTR = [['找','ㄓㄠˇ'],['出','ㄔㄨ'],['所','ㄙㄨㄛˇ'],['有','ㄧㄡˇ'],['一','ㄧ'],['樣','ㄧㄤˋ'],['的','˙ㄉㄜ'],['！','']];
+const CLOCKREAD_INSTR = [['這','ㄓㄜˋ'],['是','ㄕˋ'],['幾','ㄐㄧˇ'],['點','ㄉㄧㄢˇ'],['鐘','ㄓㄨㄥ'],['？','']];
+const DUALTASK_INSTR = [['左','ㄗㄨㄛˇ'],['右','ㄧㄡˋ'],['手','ㄕㄡˇ'],['一','ㄧ'],['起','ㄑㄧˇ'],['點','ㄉㄧㄢˇ'],['！','']];
+const SUBITIZING_INSTR = [['快', 'ㄎㄨㄞˋ'], ['數', 'ㄕㄨˋ'], ['出', 'ㄔㄨ'], ['有', 'ㄧㄡˇ'], ['幾', 'ㄐㄧˇ'], ['個', 'ㄍㄜˋ'], ['！', '']];
+const SHADOWMATCH_INSTR = [['點', 'ㄉㄧㄢˇ'], ['出', 'ㄔㄨ'], ['正', 'ㄓㄥˋ'], ['確', 'ㄑㄩㄝˋ'], ['的', '˙ㄉㄜ'], ['影', 'ㄧㄥˇ'], ['子', '˙ㄗ'], ['！', '']];
+const SEQMEM_INSTR = [['記', 'ㄐㄧˋ'], ['住', 'ㄓㄨˋ'], ['亮', 'ㄌㄧㄤˋ'], ['起', 'ㄑㄧˇ'], ['的', '˙ㄉㄜ'], ['順', 'ㄕㄨㄣˋ'], ['序', 'ㄒㄩˋ'], ['！', '']];
 
 class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -196,6 +203,13 @@ const DIFFICULTY_PRESETS = {
     普通: { timeLimit: 3000, total: 15 },
     困難: { timeLimit: 2000, total: 20 },
   },
+  Subitizing: { 簡單: { max: 5, showTime: 1200, total: 10 }, 普通: { max: 8, showTime: 900, total: 12 }, 困難: { max: 12, showTime: 600, total: 15 } },
+  ShadowMatch: { 簡單: { shapes: 3, total: 10 }, 普通: { shapes: 4, total: 12 }, 困難: { shapes: 4, total: 15, rotate: true } },
+  SequenceMemory: { 簡單: { grid: 4, startLen: 2, speed: 800 }, 普通: { grid: 6, startLen: 3, speed: 650 }, 困難: { grid: 9, startLen: 4, speed: 500 } },
+  ColorMix: { 簡單: { total: 8, pairCount: 3 }, 普通: { total: 12, pairCount: 6 }, 困難: { total: 15, pairCount: 6 } },
+  FindSame: { 簡單: { total: 12, targets: 3, time: 20 }, 普通: { total: 16, targets: 4, time: 18 }, 困難: { total: 20, targets: 5, time: 15 } },
+  ClockRead: { 簡單: { type: 'hour', total: 10 }, 普通: { type: 'half', total: 12 }, 困難: { type: 'quarter', total: 15 } },
+  DualTask: { 簡單: { sameTarget: true, total: 15 }, 普通: { sameTarget: false, total: 20 }, 困難: { sameTarget: false, switchInterval: 5, total: 25 } },
 };
 
 const GAME_TAGS = {
@@ -203,6 +217,9 @@ const GAME_TAGS = {
   OddOneOut: '辨別', Maze: '手眼', Bubble: '反應', Rhythm: '節奏',
   Puzzle: '空間', Connect: '追蹤', MissingPiece: '視覺', GoNoGo: '抑制',
   MathSprint: '數學', Stroop: '挑戰',
+  Subitizing: '數感', ShadowMatch: '形狀', SequenceMemory: '記憶',
+  ColorMix: '創意', FindSame: '搜尋',
+  ClockRead: '時間', DualTask: '協調',
 };
 
 class DifficultyScene extends Phaser.Scene {
@@ -297,6 +314,13 @@ class MenuScene extends Phaser.Scene {
       ['🛑', '停停停', 'GoNoGo'],
       ['🔢', '心算閃卡', 'MathSprint'],
       ['🎨', 'Stroop測試', 'Stroop'],
+      ['🔢', '數數看', 'Subitizing'],
+      ['🌑', '影子配對', 'ShadowMatch'],
+      ['💡', '記住順序', 'SequenceMemory'],
+      ['🎨', '顏色混色', 'ColorMix'],
+      ['🔍', '找相同', 'FindSame'],
+      ['🕐', '認識時鐘', 'ClockRead'],
+      ['👐', '左右手', 'DualTask'],
     ];
     const cols = 4;
     const pad = width * 0.04;
@@ -1563,6 +1587,967 @@ class StroopScene extends Phaser.Scene {
   }
 }
 
+// ─────────────────────────────────────────────
+// SubitizingScene：快速數點
+// ─────────────────────────────────────────────
+class SubitizingScene extends Phaser.Scene {
+  constructor() { super('Subitizing'); }
+  init(data) {
+    this.max = data.max || 5;
+    this.showTime = data.showTime || 1200;
+    this.total = data.total || 10;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.score = 0;
+    this.round = 0;
+    this.finished = false;
+    addHeader(this, SUBITIZING_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+    this.progressText = this.add.text(width - 12, 136, `0/${this.total}`, { fontSize: '18px', color: '#888' }).setOrigin(1, 0.5);
+    this.dotsGroup = this.add.group();
+    this.choiceGroup = this.add.group();
+    this.nextRound();
+  }
+  nextRound() {
+    this.round++;
+    if (this.round > this.total) { this.endGame(true); return; }
+    this.progressText.setText(`${this.round - 1}/${this.total}`);
+    const { width, height } = this.scale;
+    // 清除上一輪殘留
+    this.dotsGroup.clear(true, true);
+    this.choiceGroup.clear(true, true);
+
+    const n = Phaser.Math.Between(1, this.max);
+    this._correctAnswer = n;
+
+    // 在中央區域散佈 n 個圓點，避免重疊
+    const centerX = width / 2;
+    const centerY = height / 2 - 30;
+    const areaW = Math.min(220, width * 0.55);
+    const areaH = 200;
+    const dots = [];
+    let attempts = 0;
+    while (dots.length < n && attempts < 500) {
+      attempts++;
+      const dx = Phaser.Math.Between(-areaW / 2, areaW / 2);
+      const dy = Phaser.Math.Between(-areaH / 2, areaH / 2);
+      const x = centerX + dx;
+      const y = centerY + dy;
+      const tooClose = dots.some(d => Phaser.Math.Distance.Between(d.x, d.y, x, y) < 32);
+      if (!tooClose) {
+        const dot = this.add.circle(x, y, 14, 0xff8fab);
+        this.dotsGroup.add(dot);
+        dots.push({ x, y });
+      }
+    }
+
+    // showTime 後隱藏點，顯示選項
+    this.time.delayedCall(this.showTime, () => {
+      this.dotsGroup.getChildren().forEach(d => d.setVisible(false));
+      this.makeChoices(n);
+    });
+  }
+  makeChoices(correct) {
+    const { width, height } = this.scale;
+    // 生成 3 個不重複的干擾選項
+    const wrongs = new Set();
+    let safeMax = Math.max(correct + 3, this.max + 3);
+    let attempts = 0;
+    while (wrongs.size < 3 && attempts < 200) {
+      attempts++;
+      const delta = Phaser.Math.Between(1, 3) * (Math.random() < 0.5 ? 1 : -1);
+      const cand = correct + delta;
+      if (cand > 0 && cand !== correct && !wrongs.has(cand)) wrongs.add(cand);
+    }
+    // 如果還不夠就補上
+    for (let v = 1; wrongs.size < 3; v++) {
+      if (v !== correct && !wrongs.has(v)) wrongs.add(v);
+    }
+    const options = Phaser.Utils.Array.Shuffle([correct, ...Array.from(wrongs)]);
+    const btnW = 120, btnH = 60;
+    const gap = 16;
+    const cols = 2;
+    const startX = width / 2 - (btnW + gap) / 2;
+    const startY = height * 0.62;
+    options.forEach((val, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const bx = startX + col * (btnW + gap);
+      const by = startY + row * (btnH + gap);
+      const btn = this.add.rectangle(bx, by, btnW, btnH, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+      const label = this.add.text(bx, by, String(val), { fontSize: '28px', color: '#444', fontStyle: 'bold' }).setOrigin(0.5);
+      this.choiceGroup.add(btn);
+      this.choiceGroup.add(label);
+      pressEffect(this, btn, () => {
+        if (this.finished) return;
+        if (val === this._correctAnswer) {
+          sfxCorrect();
+          popupText(this, bx, by - 40, '✓', '#4caf78');
+          this.score++;
+        } else {
+          sfxWrong();
+          popupText(this, bx, by - 40, '✗', '#ff5c7a');
+          this.loseLife();
+        }
+        if (!this.finished) {
+          this.time.delayedCall(320, () => this.nextRound());
+        }
+      });
+    });
+  }
+  loseLife() {
+    if (this.lives <= 0) return;
+    this.lives--;
+    if (this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(false); }
+  }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    setRecord('Subitizing', { best: Math.max(this.score, getRecord('Subitizing').best || 0) });
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, success ? '🎉 全部完成！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 20, `答對 ${this.score} / ${this.total}`, { fontSize: '22px', color: '#777' }).setOrigin(0.5);
+    const replay = this.add.rectangle(width / 2, height / 2 + 40, 220, 58, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, replay, () => this.scene.start('Subitizing', { max: this.max, showTime: this.showTime, total: this.total }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 220, 58, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+// ─────────────────────────────────────────────
+// ShadowMatchScene：影子配對
+// ─────────────────────────────────────────────
+function drawShape(graphics, type, cx, cy, size, color, angle) {
+  angle = angle || 0;
+  graphics.clear();
+  graphics.fillStyle(color, 1);
+  const r = angle * Math.PI / 180;
+  function rotPt(px, py) {
+    const cos = Math.cos(r), sin = Math.sin(r);
+    return { x: cx + (px - cx) * cos - (py - cy) * sin, y: cy + (px - cx) * sin + (py - cy) * cos };
+  }
+  if (type === 'circle') {
+    graphics.fillCircle(cx, cy, size * 0.5);
+  } else if (type === 'square') {
+    const half = size * 0.45;
+    const pts = [rotPt(cx - half, cy - half), rotPt(cx + half, cy - half), rotPt(cx + half, cy + half), rotPt(cx - half, cy + half)];
+    graphics.fillPoints(pts, true);
+  } else if (type === 'triangle') {
+    const h = size * 0.5;
+    const pts = [rotPt(cx, cy - h), rotPt(cx + h * 0.87, cy + h * 0.5), rotPt(cx - h * 0.87, cy + h * 0.5)];
+    graphics.fillPoints(pts, true);
+  } else if (type === 'diamond') {
+    const hx = size * 0.48, hy = size * 0.62;
+    const pts = [rotPt(cx, cy - hy), rotPt(cx + hx, cy), rotPt(cx, cy + hy), rotPt(cx - hx, cy)];
+    graphics.fillPoints(pts, true);
+  } else if (type === 'cross') {
+    const arm = size * 0.48, thick = size * 0.18;
+    const pts1 = [rotPt(cx - arm, cy - thick), rotPt(cx + arm, cy - thick), rotPt(cx + arm, cy + thick), rotPt(cx - arm, cy + thick)];
+    const pts2 = [rotPt(cx - thick, cy - arm), rotPt(cx + thick, cy - arm), rotPt(cx + thick, cy + arm), rotPt(cx - thick, cy + arm)];
+    graphics.fillPoints(pts1, true);
+    graphics.fillPoints(pts2, true);
+  } else if (type === 'star5') {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const rad = (Math.PI / 5) * i - Math.PI / 2;
+      const dist = i % 2 === 0 ? size * 0.5 : size * 0.22;
+      pts.push(rotPt(cx + Math.cos(rad) * dist, cy + Math.sin(rad) * dist));
+    }
+    graphics.fillPoints(pts, true);
+  } else if (type === 'hexagon') {
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+      const rad = (Math.PI / 3) * i - Math.PI / 6;
+      pts.push(rotPt(cx + Math.cos(rad) * size * 0.5, cy + Math.sin(rad) * size * 0.5));
+    }
+    graphics.fillPoints(pts, true);
+  }
+}
+
+const SHAPE_TYPES = ['circle', 'square', 'triangle', 'diamond', 'cross', 'star5', 'hexagon'];
+
+class ShadowMatchScene extends Phaser.Scene {
+  constructor() { super('ShadowMatch'); }
+  init(data) {
+    this.shapeCount = data.shapes || 3;
+    this.total = data.total || 10;
+    this.rotate = data.rotate || false;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.score = 0;
+    this.round = 0;
+    this.finished = false;
+    this.shapeGraphics = [];
+    addHeader(this, SHADOWMATCH_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+    this.progressText = this.add.text(width - 12, 136, `0/${this.total}`, { fontSize: '18px', color: '#888' }).setOrigin(1, 0.5);
+    this.nextRound();
+  }
+  nextRound() {
+    this.round++;
+    if (this.round > this.total) { this.endGame(true); return; }
+    this.progressText.setText(`${this.round - 1}/${this.total}`);
+    const { width, height } = this.scale;
+    // 清除舊 graphics 與 hitArea
+    this.shapeGraphics.forEach(g => g.destroy());
+    this.shapeGraphics = [];
+    if (this._hitRects) this._hitRects.forEach(r => r.destroy());
+    this._hitRects = [];
+
+    // 選目標形狀與顏色
+    const targetType = Phaser.Utils.Array.GetRandom(SHAPE_TYPES);
+    const targetColor = Phaser.Utils.Array.GetRandom(COLORS);
+
+    // 左側畫彩色目標
+    const tg = this.add.graphics();
+    drawShape(tg, targetType, width * 0.22, height * 0.42, 70, targetColor.hex, 0);
+    this.shapeGraphics.push(tg);
+
+    // 分隔線
+    const divider = this.add.line(width / 2, height * 0.42, 0, -70, 0, 70, 0xddbbcc, 1);
+    this.shapeGraphics.push(divider);
+
+    // 選 3 個不同形狀作干擾
+    const otherTypes = SHAPE_TYPES.filter(t => t !== targetType);
+    Phaser.Utils.Array.Shuffle(otherTypes);
+    const wrongTypes = otherTypes.slice(0, 3);
+
+    // 4 個選項：1 正確 + 3 干擾，隨機排列
+    const choiceOrder = Phaser.Utils.Array.Shuffle([{ type: targetType, correct: true }, ...wrongTypes.map(t => ({ type: t, correct: false }))]);
+
+    const boxW = width * 0.36, boxH = height * 0.16;
+    const padX = (width * 0.5 - boxW) / 2;
+    const positions = [
+      { x: width * 0.62, y: height * 0.34 },
+      { x: width * 0.88, y: height * 0.34 },
+      { x: width * 0.62, y: height * 0.52 },
+      { x: width * 0.88, y: height * 0.52 },
+    ];
+
+    choiceOrder.forEach((choice, i) => {
+      const pos = positions[i];
+      const isCorrect = choice.correct;
+      const angle = (this.rotate && !isCorrect) ? Phaser.Math.Between(30, 150) : 0;
+
+      // 背景格子
+      const bg = this.add.rectangle(pos.x, pos.y, boxW, boxH, 0xfff0f5).setStrokeStyle(3, 0xff8fab).setInteractive();
+      this.shapeGraphics.push(bg);
+      this._hitRects.push(bg);
+
+      // 黑色影子形狀
+      const sg = this.add.graphics();
+      drawShape(sg, choice.type, pos.x, pos.y, 44, 0x333333, angle);
+      this.shapeGraphics.push(sg);
+
+      pressEffect(this, bg, () => {
+        if (this.finished) return;
+        if (isCorrect) {
+          sfxCorrect();
+          popupText(this, pos.x, pos.y - 30, '✓', '#4caf78');
+          this.score++;
+          this.time.delayedCall(300, () => this.nextRound());
+        } else {
+          sfxWrong();
+          popupText(this, pos.x, pos.y - 30, '✗', '#ff5c7a');
+          this.loseLife();
+          if (!this.finished) this.time.delayedCall(300, () => this.nextRound());
+        }
+      });
+    });
+  }
+  loseLife() {
+    if (this.lives <= 0) return;
+    this.lives--;
+    if (this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(false); }
+  }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    setRecord('ShadowMatch', { best: Math.max(this.score, getRecord('ShadowMatch').best || 0) });
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, success ? '🎉 全部完成！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 20, `答對 ${this.score} / ${this.total}`, { fontSize: '22px', color: '#777' }).setOrigin(0.5);
+    const replay = this.add.rectangle(width / 2, height / 2 + 40, 220, 58, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, replay, () => this.scene.start('ShadowMatch', { shapes: this.shapeCount, total: this.total, rotate: this.rotate }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 220, 58, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+// ─────────────────────────────────────────────
+// SequenceMemoryScene：記住順序
+// ─────────────────────────────────────────────
+class SequenceMemoryScene extends Phaser.Scene {
+  constructor() { super('SequenceMemory'); }
+  init(data) {
+    this.gridCount = data.grid || 4;
+    this.seqLen = data.startLen || 2;
+    this.speed = data.speed || 800;
+    this.maxLen = data.startLen || 2;
+    this._initData = data;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5;
+    this.finished = false;
+    this.locked = true;
+    this.playerSeq = [];
+    this.seq = [];
+    this.tiles = [];
+
+    // 計算 cols / rows
+    let cols, rows;
+    if (this.gridCount === 4) { cols = 2; rows = 2; }
+    else if (this.gridCount === 6) { cols = 3; rows = 2; }
+    else { cols = 3; rows = 3; }
+
+    addHeader(this, SEQMEM_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+
+    this.statusText = this.add.text(width / 2, height * 0.22, '觀察中...', { fontSize: '20px', color: '#b185db', fontStyle: 'bold' }).setOrigin(0.5);
+
+    // 畫格子
+    const tileSize = Math.min(Math.floor((width * 0.72) / cols), Math.floor((height * 0.42) / rows));
+    const gap = 10;
+    const gridW = cols * tileSize + (cols - 1) * gap;
+    const gridH = rows * tileSize + (rows - 1) * gap;
+    const originX = width / 2 - gridW / 2 + tileSize / 2;
+    const originY = height * 0.52 - gridH / 2 + tileSize / 2;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c;
+        const tx = originX + c * (tileSize + gap);
+        const ty = originY + r * (tileSize + gap);
+        const rect = this.add.rectangle(tx, ty, tileSize, tileSize, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+        this.tiles.push({ rect, idx, tx, ty });
+        pressEffect(this, rect, () => this.onTileClick(this.tiles[idx]));
+      }
+    }
+
+    this.time.delayedCall(400, () => this.showSequence());
+  }
+  showSequence() {
+    this.locked = true;
+    this.playerSeq = [];
+    this.statusText.setText('觀察中...');
+
+    // 生成序列（可重複格子）
+    this.seq = [];
+    for (let i = 0; i < this.seqLen; i++) {
+      this.seq.push(Phaser.Math.Between(0, this.tiles.length - 1));
+    }
+
+    let delay = 0;
+    this.seq.forEach((tileIdx, order) => {
+      this.time.delayedCall(delay, () => {
+        const tile = this.tiles[tileIdx];
+        tile.rect.setFillStyle(0xff8fab);
+        this.time.delayedCall(300, () => tile.rect.setFillStyle(0xffffff));
+      });
+      delay += this.speed;
+    });
+
+    this.time.delayedCall(delay + 100, () => {
+      this.locked = false;
+      this.statusText.setText('換你了！');
+    });
+  }
+  onTileClick(tile) {
+    if (this.locked || this.finished) return;
+
+    // 短暫高亮
+    tile.rect.setFillStyle(0xb185db);
+    this.time.delayedCall(150, () => tile.rect.setFillStyle(0xffffff));
+
+    this.playerSeq.push(tile.idx);
+    const pos = this.playerSeq.length - 1;
+
+    if (this.playerSeq[pos] !== this.seq[pos]) {
+      // 答錯
+      sfxWrong();
+      this.locked = true;
+      this.loseLife();
+      if (!this.finished) {
+        // 重播同一序列
+        this.time.delayedCall(600, () => this.showSequence());
+      }
+      return;
+    }
+
+    if (this.playerSeq.length === this.seq.length) {
+      // 全對
+      sfxCorrect();
+      popupText(this, this.scale.width / 2, this.scale.height * 0.35, '✓', '#4caf78');
+      this.seqLen++;
+      this.maxLen = Math.max(this.maxLen, this.seqLen);
+      this.locked = true;
+      this.time.delayedCall(500, () => this.showSequence());
+    }
+  }
+  loseLife() {
+    if (this.lives <= 0) return;
+    this.lives--;
+    if (this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(); }
+  }
+  endGame() {
+    this.finished = true;
+    this.locked = true;
+    sfxComplete();
+    const best = Math.max(this.maxLen, getRecord('SequenceMemory').best || 0);
+    setRecord('SequenceMemory', { best });
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, '遊戲結束！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 20, `最長達到 ${this.maxLen - 1} 步`, { fontSize: '22px', color: '#b185db' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 + 10, `歷史最佳：${best - 1} 步`, { fontSize: '16px', color: '#aaa' }).setOrigin(0.5);
+    const replay = this.add.rectangle(width / 2, height / 2 + 55, 220, 58, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 55, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, replay, () => this.scene.start('SequenceMemory', this._initData));
+    const menu = this.add.rectangle(width / 2, height / 2 + 125, 220, 58, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 125, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+// ─────────────────────────────────────────────
+// ColorMixScene：顏色混色
+const MIX_TABLE = [
+  { a: '紅', b: '藍', result: '紫', aHex: 0xff4444, bHex: 0x4444ff, rHex: 0x9933cc },
+  { a: '紅', b: '黃', result: '橘', aHex: 0xff4444, bHex: 0xffdd00, rHex: 0xff8800 },
+  { a: '黃', b: '藍', result: '綠', aHex: 0xffdd00, bHex: 0x4444ff, rHex: 0x33bb33 },
+  { a: '紅', b: '白', result: '粉', aHex: 0xff4444, bHex: 0xffffff, rHex: 0xffaacc },
+  { a: '黑', b: '白', result: '灰', aHex: 0x333333, bHex: 0xffffff, rHex: 0x999999 },
+  { a: '藍', b: '白', result: '淺藍', aHex: 0x4444ff, bHex: 0xffffff, rHex: 0x99bbff },
+];
+
+class ColorMixScene extends Phaser.Scene {
+  constructor() { super('ColorMix'); }
+  init(data) {
+    this.total = data.total || 8;
+    this.pairCount = data.pairCount || 3;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5; this.score = 0; this.round = 0; this.finished = false;
+    this._initData = { total: this.total, pairCount: this.pairCount };
+
+    addHeader(this, COLORMIX_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+    this.roundText = this.add.text(width - 20, 136, `0 / ${this.total}`, { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+
+    // 兩個顏色圓（左右各一）
+    this.circleA = this.add.circle(width * 0.28, height * 0.33, 52, 0xffffff).setStrokeStyle(3, 0xdddddd);
+    this.circlePlus = this.add.text(width * 0.5, height * 0.33, '+', { fontSize: '40px', color: '#aaa', fontStyle: 'bold' }).setOrigin(0.5);
+    this.circleB = this.add.circle(width * 0.72, height * 0.33, 52, 0xffffff).setStrokeStyle(3, 0xdddddd);
+    this.labelA = this.add.text(width * 0.28, height * 0.33 + 72, '', { fontSize: '20px', color: '#555', fontStyle: 'bold' }).setOrigin(0.5);
+    this.labelB = this.add.text(width * 0.72, height * 0.33 + 72, '', { fontSize: '20px', color: '#555', fontStyle: 'bold' }).setOrigin(0.5);
+
+    // 問號標示
+    this.add.text(width / 2, height * 0.52, '混合後是？', { fontSize: '20px', color: '#777' }).setOrigin(0.5);
+
+    // 4 個答案圓（2×2），存入 this.optionObjs
+    this.optionObjs = [];
+    const positions = [
+      { x: width * 0.25, y: height * 0.67 }, { x: width * 0.58, y: height * 0.67 },
+      { x: width * 0.25, y: height * 0.82 }, { x: width * 0.58, y: height * 0.82 },
+    ];
+    positions.forEach((pos, i) => {
+      const circ = this.add.circle(pos.x, pos.y, 40, 0xffffff).setStrokeStyle(3, 0xdddddd);
+      const nameText = this.add.text(pos.x + 52, pos.y, '', { fontSize: '17px', color: '#555' }).setOrigin(0, 0.5);
+      const hitArea = this.add.circle(pos.x, pos.y, 50, 0xffffff, 0).setInteractive();
+      this.optionObjs.push({ circ, nameText, hitArea });
+    });
+
+    this.nextRound();
+  }
+  nextRound() {
+    if (this.finished) return;
+    this.round++;
+    if (this.round > this.total) { this.endGame(true); return; }
+    this.roundText.setText(`${this.round} / ${this.total}`);
+
+    const pool = MIX_TABLE.slice(0, this.pairCount);
+    const entry = Phaser.Utils.Array.GetRandom(pool);
+    this.currentEntry = entry;
+
+    this.circleA.setFillStyle(entry.aHex);
+    this.circleB.setFillStyle(entry.bHex);
+    this.labelA.setText(entry.a);
+    this.labelB.setText(entry.b);
+
+    // 生成 4 個選項：正確 + 3 個來自 MIX_TABLE 其他結果
+    const correct = { name: entry.result, hex: entry.rHex };
+    const wrongPool = MIX_TABLE.filter(m => m.result !== entry.result);
+    Phaser.Utils.Array.Shuffle(wrongPool);
+    const wrongs = wrongPool.slice(0, 3).map(m => ({ name: m.result, hex: m.rHex }));
+    const options = Phaser.Utils.Array.Shuffle([correct, ...wrongs]);
+
+    this.optionObjs.forEach((obj, i) => {
+      const opt = options[i];
+      obj.circ.setFillStyle(opt.hex).setStrokeStyle(3, 0xdddddd);
+      obj.nameText.setText(opt.name);
+      obj.hitArea.removeAllListeners();
+      obj.hitArea.setInteractive();
+      obj.hitArea.on('pointerdown', () => this.onAnswer(opt.name === correct.name));
+    });
+  }
+  onAnswer(correct) {
+    if (this.finished) return;
+    if (correct) {
+      sfxCorrect();
+      this.score++;
+      popupText(this, this.scale.width / 2, this.scale.height * 0.5, '✓', '#4caf78');
+      this.time.delayedCall(400, () => this.nextRound());
+    } else {
+      sfxWrong();
+      popupText(this, this.scale.width / 2, this.scale.height * 0.5, '✕', '#ff5c7a');
+      this.loseLife();
+      if (!this.finished) this.time.delayedCall(400, () => this.nextRound());
+    }
+  }
+  loseLife() {
+    this.lives--;
+    if (this.lives >= 0 && this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(false); }
+  }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    setRecord('ColorMix', { best: Math.max(this.score, getRecord('ColorMix').best || 0) });
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, success ? '🎉 完成！' : '💔 愛心用光！', { fontSize: '28px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 25, `答對 ${this.score} 題`, { fontSize: '22px', color: '#777' }).setOrigin(0.5);
+    const again = this.add.rectangle(width / 2, height / 2 + 30, 210, 56, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 30, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('ColorMix', this._initData));
+    const menu = this.add.rectangle(width / 2, height / 2 + 98, 210, 56, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 98, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+// ─────────────────────────────────────────────
+// FindSameScene：找相同
+class FindSameScene extends Phaser.Scene {
+  constructor() { super('FindSame'); }
+  init(data) {
+    this.gridTotal = data.total || 12;
+    this.targetCount = data.targets || 3;
+    this.timeLimit = data.time || 20;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5; this.score = 0; this.finished = false;
+    this._initData = { total: this.gridTotal, targets: this.targetCount, time: this.timeLimit };
+    this.EMOJIS = ['⭐', '🔴', '🟡', '🟢', '🔷', '🌸', '⚡', '🍀'];
+
+    addHeader(this, FINDSAME_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+
+    // 目標顯示區
+    this.targetLabel = this.add.text(width / 2, height * 0.22, '', { fontSize: '48px' }).setOrigin(0.5);
+    this.add.text(width / 2, height * 0.29, '找出所有一樣的！', { fontSize: '16px', color: '#777' }).setOrigin(0.5);
+
+    // 計時器
+    this.timeText = this.add.text(width - 20, 136, '', { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+    this.timeLeft = this.timeLimit;
+    this.timerEvent = this.time.addEvent({ delay: 1000, loop: true, callback: () => {
+      if (this.finished) return;
+      this.timeLeft--;
+      this.timeText.setText(`⏱ ${this.timeLeft}s`);
+      if (this.timeLeft <= 0) this.endGame(false);
+    }});
+    this.timeText.setText(`⏱ ${this.timeLeft}s`);
+
+    this.itemTexts = [];
+    this.nextRound();
+  }
+  nextRound() {
+    if (this.finished) return;
+    // 清除上一輪物件
+    this.itemTexts.forEach(t => t.destroy());
+    this.itemTexts = [];
+
+    // 選一個目標 emoji
+    this.targetEmoji = Phaser.Utils.Array.GetRandom(this.EMOJIS);
+    this.targetLabel.setText(this.targetEmoji);
+    this.foundCount = 0;
+
+    // 生成物件陣列
+    const others = this.EMOJIS.filter(e => e !== this.targetEmoji);
+    const items = Array(this.targetCount).fill(this.targetEmoji);
+    while (items.length < this.gridTotal) items.push(Phaser.Utils.Array.GetRandom(others));
+    Phaser.Utils.Array.Shuffle(items);
+
+    // 格子排列（5 列）
+    const { width, height } = this.scale;
+    const cols = 4;
+    const rows = Math.ceil(this.gridTotal / cols);
+    const cellW = (width - 40) / cols;
+    const startY = height * 0.36;
+    const cellH = (height * 0.58) / rows;
+
+    items.forEach((emoji, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const x = 20 + col * cellW + cellW / 2;
+      const y = startY + row * cellH + cellH / 2;
+      const t = this.add.text(x, y, emoji, { fontSize: '36px' }).setOrigin(0.5).setInteractive();
+      const isTarget = (emoji === this.targetEmoji);
+      t.on('pointerdown', () => {
+        if (this.finished || !t.active) return;
+        if (isTarget) {
+          sfxCorrect();
+          t.destroy();
+          this.foundCount++;
+          if (this.foundCount >= this.targetCount) {
+            this.score++;
+            popupText(this, width / 2, height * 0.35, `✓ +1`, '#4caf78');
+            this.time.delayedCall(300, () => this.nextRound());
+          }
+        } else {
+          sfxWrong();
+          popupText(this, x, y, '✕', '#ff5c7a');
+          this.loseLife();
+        }
+      });
+      this.itemTexts.push(t);
+    });
+  }
+  loseLife() {
+    this.lives--;
+    if (this.lives >= 0 && this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(false); }
+  }
+  endGame(success) {
+    this.finished = true;
+    if (this.timerEvent) this.timerEvent.remove();
+    sfxComplete();
+    setRecord('FindSame', { best: Math.max(this.score, getRecord('FindSame').best || 0) });
+    const { width, height } = this.scale;
+    this.itemTexts.forEach(t => { if (t && t.active) t.destroy(); });
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, success ? '🎉 完成！' : '⏰ 時間到！', { fontSize: '28px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 25, `找到 ${this.score} 輪`, { fontSize: '22px', color: '#777' }).setOrigin(0.5);
+    const again = this.add.rectangle(width / 2, height / 2 + 30, 210, 56, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 30, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('FindSame', this._initData));
+    const menu = this.add.rectangle(width / 2, height / 2 + 98, 210, 56, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 98, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+// ─────────────────────────────────────────────
+// ClockReadScene：認識時鐘
+// ─────────────────────────────────────────────
+class ClockReadScene extends Phaser.Scene {
+  constructor() { super('ClockRead'); }
+  init(data) {
+    this.clockType = data.type || 'hour';
+    this.total = data.total || 10;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5; this.score = 0; this.round = 0; this.finished = false;
+    this._initData = { type: this.clockType, total: this.total };
+
+    addHeader(this, CLOCKREAD_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+    this.roundText = this.add.text(width - 20, 136, `0 / ${this.total}`, { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+
+    this.clockGfx = this.add.graphics();
+    this.clockCX = width / 2;
+    this.clockCY = height * 0.38;
+    this.clockR = Math.min(width, height) * 0.18;
+
+    this.btnObjs = [];
+    const bpos = [
+      { x: width * 0.27, y: height * 0.7 }, { x: width * 0.73, y: height * 0.7 },
+      { x: width * 0.27, y: height * 0.84 }, { x: width * 0.73, y: height * 0.84 },
+    ];
+    bpos.forEach((pos, i) => {
+      const rect = this.add.rectangle(pos.x, pos.y, 140, 52, 0xffffff).setStrokeStyle(3, 0xff8fab).setInteractive();
+      const txt = this.add.text(pos.x, pos.y, '', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+      this.btnObjs.push({ rect, txt, pos });
+    });
+
+    this.nextRound();
+  }
+  generateTime() {
+    const hour = Phaser.Math.Between(1, 12);
+    let minute = 0;
+    if (this.clockType === 'half') {
+      minute = Phaser.Math.Between(0, 1) === 0 ? 0 : 30;
+    } else if (this.clockType === 'quarter') {
+      minute = [0, 15, 30, 45][Phaser.Math.Between(0, 3)];
+    }
+    return { hour, minute };
+  }
+  timeToStr(hour, minute) {
+    if (minute === 0) return `${hour}點整`;
+    if (minute === 30) return `${hour}點半`;
+    if (minute === 15) return `${hour}點15分`;
+    if (minute === 45) return `${hour}點45分`;
+    return `${hour}點${minute}分`;
+  }
+  drawClock(hour, minute) {
+    const g = this.clockGfx;
+    g.clear();
+    const cx = this.clockCX, cy = this.clockCY, r = this.clockR;
+
+    g.fillStyle(0xffffff); g.fillCircle(cx, cy, r);
+    g.lineStyle(5, 0x444444); g.strokeCircle(cx, cy, r);
+
+    for (let n = 1; n <= 12; n++) {
+      const ang = (n / 12) * Math.PI * 2 - Math.PI / 2;
+      const lx1 = cx + Math.cos(ang) * r * 0.88;
+      const ly1 = cy + Math.sin(ang) * r * 0.88;
+      const lx2 = cx + Math.cos(ang) * r * 0.98;
+      const ly2 = cy + Math.sin(ang) * r * 0.98;
+      g.lineStyle(3, 0x888888); g.lineBetween(lx1, ly1, lx2, ly2);
+    }
+
+    const hourAngle = ((hour % 12) + minute / 60) / 12 * Math.PI * 2 - Math.PI / 2;
+    const hrLen = r * 0.55;
+    g.lineStyle(7, 0x222222);
+    g.lineBetween(cx, cy, cx + Math.cos(hourAngle) * hrLen, cy + Math.sin(hourAngle) * hrLen);
+
+    const minAngle = minute / 60 * Math.PI * 2 - Math.PI / 2;
+    const mnLen = r * 0.8;
+    g.lineStyle(4, 0x555555);
+    g.lineBetween(cx, cy, cx + Math.cos(minAngle) * mnLen, cy + Math.sin(minAngle) * mnLen);
+
+    g.fillStyle(0x222222); g.fillCircle(cx, cy, 6);
+  }
+  drawClockNumbers() {
+    if (this.clockNumTexts) this.clockNumTexts.forEach(t => t.destroy());
+    this.clockNumTexts = [];
+    const cx = this.clockCX, cy = this.clockCY, r = this.clockR;
+    for (let n = 1; n <= 12; n++) {
+      const ang = (n / 12) * Math.PI * 2 - Math.PI / 2;
+      const tx = cx + Math.cos(ang) * r * 0.75;
+      const ty = cy + Math.sin(ang) * r * 0.75;
+      const t = this.add.text(tx, ty, String(n), { fontSize: '16px', color: '#333', fontStyle: 'bold' }).setOrigin(0.5);
+      this.clockNumTexts.push(t);
+    }
+  }
+  nextRound() {
+    if (this.finished) return;
+    this.round++;
+    if (this.round > this.total) { this.endGame(true); return; }
+    this.roundText.setText(`${this.round} / ${this.total}`);
+
+    const correct = this.generateTime();
+    this.drawClock(correct.hour, correct.minute);
+    this.drawClockNumbers();
+
+    const correctStr = this.timeToStr(correct.hour, correct.minute);
+    const wrongSet = new Set([correctStr]);
+    const wrongs = [];
+    while (wrongs.length < 3) {
+      const t = this.generateTime();
+      const s = this.timeToStr(t.hour, t.minute);
+      if (!wrongSet.has(s)) { wrongSet.add(s); wrongs.push(s); }
+    }
+    const options = Phaser.Utils.Array.Shuffle([correctStr, ...wrongs]);
+
+    this.btnObjs.forEach((obj, i) => {
+      obj.txt.setText(options[i]);
+      obj.rect.setStrokeStyle(3, 0xff8fab);
+      obj.rect.removeAllListeners();
+      obj.rect.setInteractive();
+      obj.rect.on('pointerdown', () => this.onAnswer(options[i] === correctStr));
+    });
+  }
+  onAnswer(correct) {
+    if (this.finished) return;
+    if (correct) {
+      sfxCorrect(); this.score++;
+      popupText(this, this.clockCX, this.clockCY, '✓', '#4caf78');
+      this.time.delayedCall(400, () => this.nextRound());
+    } else {
+      sfxWrong();
+      popupText(this, this.clockCX, this.clockCY, '✕', '#ff5c7a');
+      this.loseLife();
+      if (!this.finished) this.time.delayedCall(400, () => this.nextRound());
+    }
+  }
+  loseLife() {
+    this.lives--;
+    if (this.lives >= 0 && this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(false); }
+  }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    setRecord('ClockRead', { best: Math.max(this.score, getRecord('ClockRead').best || 0) });
+    const { width, height } = this.scale;
+    if (this.clockNumTexts) this.clockNumTexts.forEach(t => t.destroy());
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, success ? '🎉 完成！' : '💔 愛心用光！', { fontSize: '28px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 25, `答對 ${this.score} 題`, { fontSize: '22px', color: '#777' }).setOrigin(0.5);
+    const again = this.add.rectangle(width / 2, height / 2 + 30, 210, 56, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 30, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('ClockRead', this._initData));
+    const menu = this.add.rectangle(width / 2, height / 2 + 98, 210, 56, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 98, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
+// ─────────────────────────────────────────────
+// DualTaskScene：左右手訓練
+// ─────────────────────────────────────────────
+class DualTaskScene extends Phaser.Scene {
+  constructor() { super('DualTask'); }
+  init(data) {
+    this.sameTarget = data.sameTarget !== undefined ? data.sameTarget : true;
+    this.total = data.total || 15;
+    this.switchInterval = data.switchInterval || 0;
+  }
+  create() {
+    const { width, height } = this.scale;
+    this.lives = 5; this.score = 0; this.clicks = 0; this.finished = false;
+    this._initData = { sameTarget: this.sameTarget, total: this.total, switchInterval: this.switchInterval };
+    this.SHAPES = ['⭐', '🔵', '🟥', '🔶', '🌸', '🍀'];
+
+    addHeader(this, DUALTASK_INSTR);
+    this.hearts = makeHearts(this, 56, 136, 5);
+    this.scoreText = this.add.text(width - 20, 136, `0 / ${this.total}`, { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(1, 0.5);
+
+    this.add.line(width / 2, height * 0.5, 0, -height * 0.35, 0, height * 0.35, 0xcccccc, 1);
+
+    this.leftTargetLabel = this.add.text(width * 0.25, height * 0.19, '', { fontSize: '14px', color: '#888' }).setOrigin(0.5);
+    this.rightTargetLabel = this.add.text(width * 0.75, height * 0.19, '', { fontSize: '14px', color: '#888' }).setOrigin(0.5);
+    this.leftTargetEmoji = this.add.text(width * 0.25, height * 0.26, '', { fontSize: '36px' }).setOrigin(0.5);
+    this.rightTargetEmoji = this.add.text(width * 0.75, height * 0.26, '', { fontSize: '36px' }).setOrigin(0.5);
+
+    this.leftCells = [];
+    this.rightCells = [];
+    this.switchCount = 0;
+
+    this.setupTargets();
+    this.buildGrids();
+  }
+  setupTargets() {
+    const s = this.SHAPES;
+    this.leftTarget = s[0];
+    this.rightTarget = this.sameTarget ? s[0] : s[1];
+    this.leftTargetLabel.setText('左手找');
+    this.rightTargetLabel.setText('右手找');
+    this.leftTargetEmoji.setText(this.leftTarget);
+    this.rightTargetEmoji.setText(this.rightTarget);
+  }
+  buildGrids() {
+    const { width, height } = this.scale;
+    const cols = 2, rows = 2;
+    const cellSize = Math.min(width * 0.22, 80);
+    const gap = 8;
+
+    this.leftCells.forEach(c => { c.bg.destroy(); c.txt.destroy(); });
+    this.rightCells.forEach(c => { c.bg.destroy(); c.txt.destroy(); });
+    this.leftCells = [];
+    this.rightCells = [];
+
+    const startY = height * 0.38;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const lx = width * 0.5 - (cols - c) * (cellSize + gap) + cellSize / 2 - 10;
+        const rx = width * 0.5 + c * (cellSize + gap) + cellSize / 2 + 10;
+        const y = startY + r * (cellSize + gap);
+
+        const lbg = this.add.rectangle(lx, y, cellSize, cellSize, 0xffffff).setStrokeStyle(3, 0xff8fab).setInteractive();
+        const ltxt = this.add.text(lx, y, '', { fontSize: '32px' }).setOrigin(0.5);
+        const rbg = this.add.rectangle(rx, y, cellSize, cellSize, 0xffffff).setStrokeStyle(3, 0x4488ff).setInteractive();
+        const rtxt = this.add.text(rx, y, '', { fontSize: '32px' }).setOrigin(0.5);
+
+        const lCell = { bg: lbg, txt: ltxt, side: 'left', x: lx, y };
+        const rCell = { bg: rbg, txt: rtxt, side: 'right', x: rx, y };
+
+        lbg.on('pointerdown', () => this.onCellClick(lCell));
+        rbg.on('pointerdown', () => this.onCellClick(rCell));
+
+        this.leftCells.push(lCell);
+        this.rightCells.push(rCell);
+      }
+    }
+    this.fillGrids();
+  }
+  fillGrids() {
+    const fillSide = (cells, target) => {
+      const others = this.SHAPES.filter(s => s !== target);
+      const emojis = [target];
+      while (emojis.length < cells.length) emojis.push(Phaser.Utils.Array.GetRandom(others));
+      Phaser.Utils.Array.Shuffle(emojis);
+      cells.forEach((cell, i) => cell.txt.setText(emojis[i]));
+    };
+    fillSide(this.leftCells, this.leftTarget);
+    fillSide(this.rightCells, this.rightTarget);
+  }
+  onCellClick(cell) {
+    if (this.finished) return;
+    const target = cell.side === 'left' ? this.leftTarget : this.rightTarget;
+    const emoji = cell.txt.text;
+    if (emoji === target) {
+      sfxCorrect();
+      this.score++;
+      this.clicks++;
+      popupText(this, cell.x, cell.y, '✓', '#4caf78');
+      this.scoreText.setText(`${this.score} / ${this.total}`);
+      if (this.score >= this.total) { this.endGame(true); return; }
+      const others = this.SHAPES.filter(s => s !== target);
+      cell.txt.setText(Phaser.Utils.Array.GetRandom(others));
+      if (this.switchInterval > 0 && this.clicks % this.switchInterval === 0) {
+        const tmp = this.leftTarget; this.leftTarget = this.rightTarget; this.rightTarget = tmp;
+        this.leftTargetEmoji.setText(this.leftTarget);
+        this.rightTargetEmoji.setText(this.rightTarget);
+        this.fillGrids();
+      }
+    } else {
+      sfxWrong();
+      popupText(this, cell.x, cell.y, '✕', '#ff5c7a');
+      this.loseLife();
+    }
+  }
+  loseLife() {
+    this.lives--;
+    if (this.lives >= 0 && this.hearts[this.lives]) this.hearts[this.lives].setText('🖤');
+    if (this.lives <= 0) { this.finished = true; this.endGame(false); }
+  }
+  endGame(success) {
+    this.finished = true;
+    sfxComplete();
+    setRecord('DualTask', { best: Math.max(this.score, getRecord('DualTask').best || 0) });
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.93);
+    this.add.text(width / 2, height / 2 - 70, success ? '🎉 完成！' : '💔 愛心用光！', { fontSize: '28px', color: '#444' }).setOrigin(0.5);
+    this.add.text(width / 2, height / 2 - 25, `點對 ${this.score} 次`, { fontSize: '22px', color: '#777' }).setOrigin(0.5);
+    const again = this.add.rectangle(width / 2, height / 2 + 30, 210, 56, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 30, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('DualTask', this._initData));
+    const menu = this.add.rectangle(width / 2, height / 2 + 98, 210, 56, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 98, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
+  }
+}
+
 const config = {
   type: Phaser.AUTO,
   parent: 'game',
@@ -1570,7 +2555,7 @@ const config = {
   height: Math.min(window.innerHeight, 854),
   backgroundColor: '#fdeef4',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, CharSelectScene, MenuScene, DifficultyScene, StarCatcherScene, SchulteScene, MemoryScene, SimonScene, OddOneOutScene, MazeScene, BubbleScene, RhythmScene, PuzzleScene, ConnectScene, MissingPieceScene, GoNoGoScene, MathSprintScene, StroopScene],
+  scene: [BootScene, CharSelectScene, MenuScene, DifficultyScene, StarCatcherScene, SchulteScene, MemoryScene, SimonScene, OddOneOutScene, MazeScene, BubbleScene, RhythmScene, PuzzleScene, ConnectScene, MissingPieceScene, GoNoGoScene, MathSprintScene, StroopScene, SubitizingScene, ShadowMatchScene, SequenceMemoryScene, ColorMixScene, FindSameScene, ClockReadScene, DualTaskScene],
 };
 
 new Phaser.Game(config);
