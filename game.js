@@ -11,7 +11,7 @@ function setRecord(gameKey, data) {
 // 扉扉大冒險 — Phaser 3, 單檔案無建置流程
 // 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
 
-const VERSION = '20260620 10:02';
+const VERSION = '20260620 10:28';
 
 const COLORS = [
   { name: '紅色', hex: 0xff5c7a, emoji: '🔴' },
@@ -336,38 +336,39 @@ class MenuScene extends Phaser.Scene {
     ];
 
     const cols = 4;
-    const pad = width * 0.035;
+    const pad = width * 0.04;
     const size = (width - pad * (cols + 1)) / cols;
     const startX = pad + size / 2;
-    const startY = hdrH + pad;
-    const rowH = size + pad + 6;
+    const gridStartY = hdrH + pad;
+    const rowH = size + pad + 18;
 
     levels.forEach(([icon, label, sceneKey], i) => {
       const col = i % cols, row = Math.floor(i / cols);
       const x = startX + col * (size + pad);
-      const y = startY + row * rowH;
+      const y = gridStartY + row * rowH;
       this.makeSquare(x, y, size, icon, label, sceneKey);
     });
 
     // 捲動設定
     const rows = Math.ceil(levels.length / cols);
-    const totalH = startY + rows * rowH + pad;
+    const totalH = gridStartY + rows * rowH + pad;
     const maxScroll = Math.max(0, totalH - height);
     this.cameras.main.setBounds(0, 0, width, Math.max(height, totalH));
 
-    let startY = 0, camY0 = 0;
+    let ptrStartY = 0, camY0 = 0;
     this.input.on('pointerdown', p => {
-      startY = p.y;
+      ptrStartY = p.y;
       camY0 = this.cameras.main.scrollY;
       this.hasDragged = false;
     });
     this.input.on('pointermove', p => {
       if (!p.isDown) return;
-      const delta = startY - p.y;
-      if (Math.abs(delta) > 8) this.hasDragged = true;
-      this.cameras.main.setScroll(0, Phaser.Math.Clamp(camY0 + delta, 0, maxScroll));
+      const delta = ptrStartY - p.y;
+      if (Math.abs(delta) > 12) this.hasDragged = true;
+      if (maxScroll > 0) this.cameras.main.setScroll(0, Phaser.Math.Clamp(camY0 + delta, 0, maxScroll));
     });
-    this.input.on('pointerup', () => { this.hasDragged = false; });
+    // 注意：不在 pointerup 重置 hasDragged，由下次 pointerdown 重置
+    // 避免場景 pointerup 比按鈕 pointerup 先跑導致誤觸
   }
 
   makeSquare(x, y, size, icon, label, sceneKey) {
