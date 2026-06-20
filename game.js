@@ -11,6 +11,8 @@ function setRecord(gameKey, data) {
 // 扉扉大冒險 — Phaser 3, 單檔案無建置流程
 // 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
 
+const VERSION = '20260620 08:38';
+
 const COLORS = [
   { name: '紅色', hex: 0xff5c7a, emoji: '🔴' },
   { name: '黃色', hex: 0xffd23f, emoji: '🟡' },
@@ -275,6 +277,8 @@ class CharSelectScene extends Phaser.Scene {
     });
     const resetBtn = this.add.text(width / 2 + 45, chipY + 36, '↺ 重置', { fontSize: '14px', color: '#999' }).setOrigin(0.5).setInteractive();
     pressEffect(this, resetBtn, () => { resetGirlName(); this.scene.restart(); });
+
+    this.add.text(width - 8, height - 8, `v ${VERSION}`, { fontSize: '11px', color: '#ccc' }).setOrigin(1, 1);
   }
   makeCharCard(x, y, key, label) {
     const card = this.add.rectangle(x, y, 140, 170, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
