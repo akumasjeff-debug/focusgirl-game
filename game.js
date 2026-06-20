@@ -11,7 +11,7 @@ function setRecord(gameKey, data) {
 // 扉扉大冒險 — Phaser 3, 單檔案無建置流程
 // 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
 
-const VERSION = '20260620 10:45';
+const VERSION = '20260620 09:30';
 
 const COLORS = [
   { name: '紅色', hex: 0xff5c7a, emoji: '🔴' },
