@@ -1,3 +1,13 @@
+// 進度記錄
+function getRecord(gameKey) {
+  try { return JSON.parse(localStorage.getItem('fg_rec_' + gameKey) || '{}'); } catch { return {}; }
+}
+function setRecord(gameKey, data) {
+  const current = getRecord(gameKey);
+  const merged = { ...current, ...data };
+  localStorage.setItem('fg_rec_' + gameKey, JSON.stringify(merged));
+}
+
 // 扉扉大冒險 — Phaser 3, 單檔案無建置流程
 // 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
 
@@ -188,6 +198,13 @@ const DIFFICULTY_PRESETS = {
   },
 };
 
+const GAME_TAGS = {
+  StarCatcher: '反應', Schulte: '掃描', Memory: '記憶', Simon: '順序',
+  OddOneOut: '辨別', Maze: '手眼', Bubble: '反應', Rhythm: '節奏',
+  Puzzle: '空間', Connect: '追蹤', MissingPiece: '視覺', GoNoGo: '抑制',
+  MathSprint: '數學', Stroop: '挑戰',
+};
+
 class DifficultyScene extends Phaser.Scene {
   constructor() { super('Difficulty'); }
   init(data) { this.targetScene = data.scene; this.icon = data.icon; this.label = data.label; }
@@ -290,13 +307,29 @@ class MenuScene extends Phaser.Scene {
       const col = i % cols, row = Math.floor(i / cols);
       const x = startX + col * (size + pad);
       const y = startY + row * (size + pad + 20);
-      this.makeSquare(x, y, size, icon, label, () => this.scene.start('Difficulty', { scene: sceneKey, icon, label }));
+      this.makeSquare(x, y, size, icon, label, sceneKey, () => this.scene.start('Difficulty', { scene: sceneKey, icon, label }));
     });
   }
-  makeSquare(x, y, size, icon, label, onClick) {
+  makeSquare(x, y, size, icon, label, sceneKey, onClick) {
     const btn = this.add.rectangle(x, y, size, size, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
     this.add.text(x, y - size * 0.1, icon, { fontSize: `${Math.floor(size * 0.42)}px` }).setOrigin(0.5);
     this.add.text(x, y + size * 0.34, label, { fontSize: '12px', color: '#777' }).setOrigin(0.5);
+    const rec = getRecord(sceneKey);
+    let recStr = '';
+    if (sceneKey === 'Memory' || sceneKey === 'Puzzle') {
+      if (rec.best) recStr = `最少: ${rec.best}次`;
+    } else if (sceneKey === 'Schulte') {
+      if (rec.best) recStr = `最快: ${rec.best}s`;
+    } else {
+      if (rec.best) recStr = `最佳: ${rec.best}`;
+    }
+    if (recStr) this.add.text(x, y + size * 0.46, recStr, { fontSize: '10px', color: '#aaa' }).setOrigin(0.5);
+    const tag = GAME_TAGS[sceneKey];
+    if (tag) {
+      const tagX = x + size * 0.44, tagY = y - size * 0.44;
+      this.add.rectangle(tagX, tagY, 28, 16, 0xffe0ea).setOrigin(0.5);
+      this.add.text(tagX, tagY, tag, { fontSize: '9px', color: '#c05' }).setOrigin(0.5);
+    }
     pressEffect(this, btn, onClick);
   }
 }
@@ -439,6 +472,11 @@ class SchulteScene extends Phaser.Scene {
   endGame(success) {
     this.finished = true;
     sfxComplete();
+    if (success) {
+      const elapsed = (this.time.now - this.startTime) / 1000;
+      const prev = getRecord('Schulte').best;
+      if (!prev || elapsed < prev) setRecord('Schulte', { best: parseFloat(elapsed.toFixed(1)) });
+    }
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     if (success) {
@@ -518,11 +556,16 @@ class MemoryScene extends Phaser.Scene {
   }
   endGame() {
     sfxComplete();
+    const prev = getRecord('Memory').best;
+    if (!prev || this.moves < prev) setRecord('Memory', { best: this.moves });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, `🎉 配對成功！共 ${this.moves} 次`, { fontSize: '24px', color: '#444' }).setOrigin(0.5);
-    const menu = this.add.rectangle(width / 2, height / 2 + 40, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
-    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    const again = this.add.rectangle(width / 2, height / 2 + 40, 220, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('Memory', { pairs: this.pairs }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 220, 60, 0xffffff).setStrokeStyle(4, 0xb185db).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
     pressEffect(this, menu, () => this.scene.start('Menu'));
   }
 }
@@ -609,7 +652,7 @@ class SimonScene extends Phaser.Scene {
 
 class OddOneOutScene extends Phaser.Scene {
   constructor() { super('OddOneOut'); }
-  init(data) { this.level = data.level || 1; this.timeLeft = data.time || 45; }
+  init(data) { this.level = data.level || 1; this.timeLeft = data.time || 45; this.initTime = data.time || 45; }
   create() {
     const { width, height } = this.scale;
     this.score = 0;
@@ -669,12 +712,16 @@ class OddOneOutScene extends Phaser.Scene {
   endGame() {
     this.clock.remove();
     sfxComplete();
+    setRecord('OddOneOut', { best: Math.max(this.score, getRecord('OddOneOut').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, `🎉 完成！分數 ${this.score}`, { fontSize: '26px', color: '#444' }).setOrigin(0.5);
-    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
-    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
-    pressEffect(this, next, () => this.scene.start('Menu'));
+    const again = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('OddOneOut', { level: this.level, time: this.initTime }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
   }
 }
 
@@ -799,9 +846,12 @@ class MazeScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, success ? '🎉 到達終點！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
-    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
-    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
-    pressEffect(this, next, () => this.scene.start('Menu'));
+    const again = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('Maze', { tolerance: this.tolerance, points: this.pointCount, scroll: this.scrollSpeed }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
   }
 }
 
@@ -869,12 +919,16 @@ class BubbleScene extends Phaser.Scene {
     this.spawnTimer.remove();
     this.bubbles.forEach(b => b.destroy());
     sfxComplete();
+    setRecord('Bubble', { best: Math.max(this.score, getRecord('Bubble').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, `🎉 完成！分數 ${this.score}`, { fontSize: '26px', color: '#444' }).setOrigin(0.5);
-    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
-    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
-    pressEffect(this, next, () => this.scene.start('Menu'));
+    const again = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('Bubble', { level: this.level }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
   }
 }
 
@@ -944,6 +998,7 @@ class RhythmScene extends Phaser.Scene {
   endGame() {
     this.active = false;
     sfxComplete();
+    setRecord('Rhythm', { best: Math.max(this.maxCombo, getRecord('Rhythm').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, `🎉 最高連續 ${this.maxCombo} 次！`, { fontSize: '24px', color: '#444' }).setOrigin(0.5);
@@ -1068,27 +1123,20 @@ class ConnectScene extends Phaser.Scene {
     this.dots.forEach(d => this.add.text(d.x, d.y, String(d.num), { fontSize: '18px', color: '#444', fontStyle: 'bold' }).setOrigin(0.5));
 
     this.input.on('pointerdown', (p) => {
-      this.dragging = true;
-      this.trail = [{ x: p.x, y: p.y }];
-    });
-    this.input.on('pointerup', () => {
-      if (this.dragging && !this.finished && this.next > 1) {
-        this.next = 1;
-        this.dots.forEach(d => { d.done = false; d.circle.setFillStyle(0xffffff); });
-        this.lineGraphics.clear();
-        this.trail = [];
-      }
-      this.dragging = false;
-    });
-    this.input.on('pointermove', (p) => {
-      if (!this.dragging || this.finished) return;
-      this.trail.push({ x: p.x, y: p.y });
-      this.redrawTrail();
+      if (this.finished) return;
       const target = this.dots[this.next - 1];
-      if (target && !target.done && Phaser.Math.Distance.Between(p.x, p.y, target.x, target.y) < 26) {
+      if (target && !target.done && Phaser.Math.Distance.Between(p.x, p.y, target.x, target.y) < 36) {
         target.done = true;
         target.circle.setFillStyle(0x4caf78);
         sfxCorrect();
+        if (this.next > 1) {
+          const prev = this.dots[this.next - 2];
+          this.lineGraphics.lineStyle(4, 0xff8fab, 1);
+          this.lineGraphics.beginPath();
+          this.lineGraphics.moveTo(prev.x, prev.y);
+          this.lineGraphics.lineTo(target.x, target.y);
+          this.lineGraphics.strokePath();
+        }
         this.next++;
         if (this.next > this.total) this.win();
       }
@@ -1114,6 +1162,8 @@ class ConnectScene extends Phaser.Scene {
   endGame(success) {
     this.finished = true;
     sfxComplete();
+    const prev = getRecord('Puzzle').best;
+    if (!prev || this.moves < prev) setRecord('Puzzle', { best: this.moves });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, success ? '🎉 連完了！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
@@ -1125,7 +1175,7 @@ class ConnectScene extends Phaser.Scene {
 
 class MissingPieceScene extends Phaser.Scene {
   constructor() { super('MissingPiece'); }
-  init(data) { this.gridSize = data.grid || 4; this.timeLeft = data.time || 40; }
+  init(data) { this.gridSize = data.grid || 4; this.timeLeft = data.time || 40; this.initTime = data.time || 40; }
   create() {
     const { width, height } = this.scale;
     this.score = 0;
@@ -1191,12 +1241,16 @@ class MissingPieceScene extends Phaser.Scene {
   endGame() {
     this.clock.remove();
     sfxComplete();
+    setRecord('MissingPiece', { best: Math.max(this.score, getRecord('MissingPiece').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 40, `🎉 完成！分數 ${this.score}`, { fontSize: '26px', color: '#444' }).setOrigin(0.5);
-    const next = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
-    this.add.text(width / 2, height / 2 + 40, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
-    pressEffect(this, next, () => this.scene.start('Menu'));
+    const again = this.add.rectangle(width / 2, height / 2 + 40, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 40, '再玩一次', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, again, () => this.scene.start('MissingPiece', { grid: this.gridSize, time: this.initTime }));
+    const menu = this.add.rectangle(width / 2, height / 2 + 110, 200, 60, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
+    this.add.text(width / 2, height / 2 + 110, '回主選單', { fontSize: '20px', color: '#444' }).setOrigin(0.5);
+    pressEffect(this, menu, () => this.scene.start('Menu'));
   }
 }
 
@@ -1271,6 +1325,7 @@ class GoNoGoScene extends Phaser.Scene {
   endGame(success) {
     this.finished = true;
     sfxComplete();
+    setRecord('GoNoGo', { best: Math.max(this.score, getRecord('GoNoGo').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 50, success ? '🎉 完成挑戰！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
@@ -1393,6 +1448,7 @@ class MathSprintScene extends Phaser.Scene {
   endGame(success) {
     this.finished = true;
     sfxComplete();
+    setRecord('MathSprint', { best: Math.max(this.score, getRecord('MathSprint').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 50, success ? '🎉 全部答完！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
@@ -1408,6 +1464,7 @@ class StroopScene extends Phaser.Scene {
   init(data) {
     this.timeLimit = data.timeLimit || 3000;
     this.totalRounds = data.total || 15;
+    this.isEasy = (data.timeLimit || 3000) >= 4000;
   }
   create() {
     const { width, height } = this.scale;
@@ -1442,7 +1499,11 @@ class StroopScene extends Phaser.Scene {
 
     this.targetIdx = Phaser.Math.Between(0, COLORS.length - 1);
     let wordIdx;
-    do { wordIdx = Phaser.Math.Between(0, COLORS.length - 1); } while (wordIdx === this.targetIdx);
+    if (this.isEasy) {
+      wordIdx = this.targetIdx;
+    } else {
+      do { wordIdx = Phaser.Math.Between(0, COLORS.length - 1); } while (wordIdx === this.targetIdx);
+    }
 
     const inkHex = '#' + COLORS[this.targetIdx].hex.toString(16).padStart(6, '0');
     this.wordText.setText(COLORS[wordIdx].name).setColor(inkHex);
@@ -1491,6 +1552,7 @@ class StroopScene extends Phaser.Scene {
   endGame(success) {
     this.finished = true;
     sfxComplete();
+    setRecord('Stroop', { best: Math.max(this.score, getRecord('Stroop').best || 0) });
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.92);
     this.add.text(width / 2, height / 2 - 50, success ? '🎉 完成挑戰！' : '💔 愛心用光了！', { fontSize: '26px', color: '#444' }).setOrigin(0.5);
