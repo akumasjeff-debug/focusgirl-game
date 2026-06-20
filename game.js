@@ -11,7 +11,7 @@ function setRecord(gameKey, data) {
 // 扉扉大冒險 — Phaser 3, 單檔案無建置流程
 // 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
 
-const VERSION = '20260620 10:28';
+const VERSION = '20260620 10:45';
 
 const COLORS = [
   { name: '紅色', hex: 0xff5c7a, emoji: '🔴' },
@@ -339,7 +339,7 @@ class MenuScene extends Phaser.Scene {
     const pad = width * 0.04;
     const size = (width - pad * (cols + 1)) / cols;
     const startX = pad + size / 2;
-    const gridStartY = hdrH + pad;
+    const gridStartY = hdrH + pad + size / 2; // 格子 center，確保頂部不被 header 遮住
     const rowH = size + pad + 18;
 
     levels.forEach(([icon, label, sceneKey], i) => {
