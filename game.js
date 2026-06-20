@@ -11,7 +11,7 @@ function setRecord(gameKey, data) {
 // 扉扉大冒險 — Phaser 3, 單檔案無建置流程
 // 角色用 PNG（girl.png / cat.png），找不到圖檔時自動退回 emoji
 
-const VERSION = '20260620 08:38';
+const VERSION = '20260620 09:45';
 
 const COLORS = [
   { name: '紅色', hex: 0xff5c7a, emoji: '🔴' },
@@ -297,11 +297,19 @@ class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
   create() {
     const { width, height } = this.scale;
-    this.add.text(width / 2, height * 0.1, '← 換角色', { fontSize: '16px', color: '#999' })
-      .setOrigin(0.5).setInteractive().on('pointerdown', () => this.scene.start('CharSelect'));
-    addCharacter(this, width / 2 - 90, height * 0.16, 40);
-    this.add.text(width / 2 + 10, height * 0.16, gameTitle(), { fontSize: '26px', fontFamily: 'sans-serif', color: '#ff3d7f', fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 }).setOrigin(0.5);
-    this.add.text(width / 2, height * 0.23, '選一個遊戲開始吧！', { fontSize: '18px', color: '#777' }).setOrigin(0.5);
+    this.hasDragged = false;
+
+    // 固定 header（不隨 camera 捲動）
+    const hdrH = Math.round(height * 0.22);
+    this.add.rectangle(width / 2, hdrH / 2, width, hdrH, 0xfdeef4).setScrollFactor(0).setDepth(10);
+    this.add.text(width / 2, height * 0.055, '← 換角色', { fontSize: '15px', color: '#999' })
+      .setOrigin(0.5).setInteractive().setScrollFactor(0).setDepth(11)
+      .on('pointerdown', () => this.scene.start('CharSelect'));
+    addCharacter(this, width / 2 - 78, height * 0.135, 36).setScrollFactor(0).setDepth(11);
+    this.add.text(width / 2 + 8, height * 0.135, gameTitle(), { fontSize: '23px', fontFamily: 'sans-serif', color: '#ff3d7f', fontStyle: 'bold', stroke: '#ffffff', strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(11);
+    this.add.text(width / 2, height * 0.195, '選一個遊戲開始吧！ 👇 往下滑', { fontSize: '13px', color: '#aaa' }).setOrigin(0.5).setScrollFactor(0).setDepth(11);
+    // 版本號固定右下
+    this.add.text(width - 6, height - 6, `v ${VERSION}`, { fontSize: '12px', color: '#bbb' }).setOrigin(1, 1).setScrollFactor(0).setDepth(11);
 
     const levels = [
       ['⭐', '接星星', 'StarCatcher'],
@@ -326,22 +334,46 @@ class MenuScene extends Phaser.Scene {
       ['🕐', '認識時鐘', 'ClockRead'],
       ['👐', '左右手', 'DualTask'],
     ];
+
     const cols = 4;
-    const pad = width * 0.04;
+    const pad = width * 0.035;
     const size = (width - pad * (cols + 1)) / cols;
     const startX = pad + size / 2;
-    const startY = height * 0.4;
+    const startY = hdrH + pad;
+    const rowH = size + pad + 6;
+
     levels.forEach(([icon, label, sceneKey], i) => {
       const col = i % cols, row = Math.floor(i / cols);
       const x = startX + col * (size + pad);
-      const y = startY + row * (size + pad + 20);
-      this.makeSquare(x, y, size, icon, label, sceneKey, () => this.scene.start('Difficulty', { scene: sceneKey, icon, label }));
+      const y = startY + row * rowH;
+      this.makeSquare(x, y, size, icon, label, sceneKey);
     });
+
+    // 捲動設定
+    const rows = Math.ceil(levels.length / cols);
+    const totalH = startY + rows * rowH + pad;
+    const maxScroll = Math.max(0, totalH - height);
+    this.cameras.main.setBounds(0, 0, width, Math.max(height, totalH));
+
+    let startY = 0, camY0 = 0;
+    this.input.on('pointerdown', p => {
+      startY = p.y;
+      camY0 = this.cameras.main.scrollY;
+      this.hasDragged = false;
+    });
+    this.input.on('pointermove', p => {
+      if (!p.isDown) return;
+      const delta = startY - p.y;
+      if (Math.abs(delta) > 8) this.hasDragged = true;
+      this.cameras.main.setScroll(0, Phaser.Math.Clamp(camY0 + delta, 0, maxScroll));
+    });
+    this.input.on('pointerup', () => { this.hasDragged = false; });
   }
-  makeSquare(x, y, size, icon, label, sceneKey, onClick) {
-    const btn = this.add.rectangle(x, y, size, size, 0xffffff).setStrokeStyle(4, 0xff8fab).setInteractive();
-    this.add.text(x, y - size * 0.1, icon, { fontSize: `${Math.floor(size * 0.42)}px` }).setOrigin(0.5);
-    this.add.text(x, y + size * 0.34, label, { fontSize: '12px', color: '#777' }).setOrigin(0.5);
+
+  makeSquare(x, y, size, icon, label, sceneKey) {
+    const btn = this.add.rectangle(x, y, size, size, 0xffffff).setStrokeStyle(3, 0xff8fab).setInteractive();
+    this.add.text(x, y - size * 0.1, icon, { fontSize: `${Math.floor(size * 0.4)}px` }).setOrigin(0.5);
+    this.add.text(x, y + size * 0.34, label, { fontSize: '11px', color: '#777' }).setOrigin(0.5);
     const rec = getRecord(sceneKey);
     let recStr = '';
     if (sceneKey === 'Memory' || sceneKey === 'Puzzle') {
@@ -351,14 +383,20 @@ class MenuScene extends Phaser.Scene {
     } else {
       if (rec.best) recStr = `最佳: ${rec.best}`;
     }
-    if (recStr) this.add.text(x, y + size * 0.46, recStr, { fontSize: '10px', color: '#aaa' }).setOrigin(0.5);
+    if (recStr) this.add.text(x, y + size * 0.46, recStr, { fontSize: '9px', color: '#aaa' }).setOrigin(0.5);
     const tag = GAME_TAGS[sceneKey];
     if (tag) {
       const tagX = x + size * 0.44, tagY = y - size * 0.44;
-      this.add.rectangle(tagX, tagY, 28, 16, 0xffe0ea).setOrigin(0.5);
-      this.add.text(tagX, tagY, tag, { fontSize: '9px', color: '#c05' }).setOrigin(0.5);
+      this.add.rectangle(tagX, tagY, 26, 14, 0xffe0ea).setOrigin(0.5);
+      this.add.text(tagX, tagY, tag, { fontSize: '8px', color: '#c05' }).setOrigin(0.5);
     }
-    pressEffect(this, btn, onClick);
+    btn.on('pointerdown', () => {
+      beep(600, 0.06, 'triangle');
+      this.tweens.add({ targets: btn, scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true });
+    });
+    btn.on('pointerup', () => {
+      if (!this.hasDragged) this.scene.start('Difficulty', { scene: sceneKey, icon, label });
+    });
   }
 }
 
